@@ -1,0 +1,13 @@
+{
+ "backup": "pixhawk_20261023-134458",
+ "why": "before flashing the V4 nose-lift firmware (branch v4/nose-lift-module) for HITL",
+ "board": "Pixhawk 6X on /dev/cu.usbmodem01, SYS_HITL 0, disarmed",
+ "firmware": "build Oct 19 2026 19:12:51, PX4 2a0e9109 - the same image as archive 20261019-193544 (copied, a Pixhawk cannot hand back its flash)",
+ "sha256": {
+  "board_info_20261023-134458.json": "39fa379926b00ca8665e5669235056c07ac6089b42e85a57b2b74f5a7fdd5368",
+  "firmware_20261023-134458_from_archive_20261019-193544_px4_fmu-v6x.px4": "65ceedfce650f84f1822e02bd0f5b454ac030329a07fef7afb63104d8198619f",
+  "params_20261023-134458.json": "9ae04ed30a0c5a4a86f04f29ebea6de69ace89285043cdf4c327257b7cfd6786",
+  "params_20261023-134458.params": "142bfccf8cd5edbcba0898d3dc6b05a583ffbf911a69c7f1647dfb3be956352f",
+  "ver_all_20261023-134458.txt": "e24f179f7455bc086a7eb887af1f66508d5d90dd520745a998f189e503480575"
+ }
+}

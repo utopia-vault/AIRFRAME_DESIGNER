@@ -48,6 +48,27 @@
       "port": 8084
     },
     {
+      "name": "v4-nose-lift-hitl",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "PX4_SOURCE_DIR=/Users/stefanosfragkoulis/PX4-Autopilot-atlas",
+        ".venv/bin/python",
+        "-m",
+        "airframe_designer",
+        "ui",
+        "--airframe",
+        "/Users/stefanosfragkoulis/AIRFRAME_REPRO/v4_weighed_card20/airframe_V4_10kg_park-10_nlf.json",
+        "--http",
+        "127.0.0.1:8084",
+        "--no-browser",
+        "--mode",
+        "hitl",
+        "--serial",
+        "/dev/cu.usbmodem01"
+      ],
+      "port": 8084
+    },
+    {
       "name": "airframe-designer",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": [

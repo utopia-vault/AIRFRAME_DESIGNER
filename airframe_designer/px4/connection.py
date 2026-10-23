@@ -970,9 +970,15 @@ class ConnectionManager:
         # export and from the list, so the second half of the push must not put them back from a SITL
         # run that happened to have the module built in.
         off = self.sim.airframe.modules_off_params() if getattr(self.sim, "airframe", None) else set()
+        # The design's own parameters went out in the first half of the push and are the design's to set: a SITL run
+        # of another design (another park angle, another wiring) must not write its values back over them.
+        try:
+            own = set(self.export_params_fn() or {}) if self.export_params_fn else set()
+        except ValueError:
+            own = set()
         for name, sv in ref["params"].items():
             bp = link.params.get(name)
-            if bp is None or name in off:
+            if bp is None or name in off or name in own:
                 continue
             if self.SYNC_EXCLUDE.match(name):
                 if abs(float(bp["value"]) - float(sv)) > 1e-6:

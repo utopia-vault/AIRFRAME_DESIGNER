@@ -560,3 +560,17 @@ def test_the_sticks_survive_a_57600_radio_budget():
     asks = telemetry_asks(57600)
     assert asks.get(65, 0) >= 1, f"no room left for the pilot's sticks: {asks}"
     assert asks[32] >= 10 and asks[31] >= 10, "and the pose does not pay for them"
+
+
+def test_the_sitl_reference_never_writes_over_the_designs_own_parameters():
+    """Update PX4 writes the design, then copies what the design does not mention from the last SITL run. A SITL run of
+    another design (here parked at -20 deg) must not put its landing angle back over this design's -10."""
+    from airframe_designer.px4.connection import ConnectionManager
+    conn = ConnectionManager.__new__(ConnectionManager)
+    conn.sitl_reference = lambda: {"time": 0, "airframe": "other", "params": {"NLF_LAND_ANG": -20.0, "MPC_XY_P": 2.0}}
+    conn.link = SimpleNamespace(mode="hitl", param_count=2,
+                                params={"NLF_LAND_ANG": {"value": -10.0}, "MPC_XY_P": {"value": 1.0}})
+    conn.sim = SimpleNamespace(airframe=SimpleNamespace(modules_off_params=lambda: set()))
+    conn.export_params_fn = lambda: {"NLF_LAND_ANG": -10.0}
+    d = conn.sitl_diff()
+    assert [x["name"] for x in d["differ"]] == ["MPC_XY_P"], "only what the design leaves unsaid comes from SITL"

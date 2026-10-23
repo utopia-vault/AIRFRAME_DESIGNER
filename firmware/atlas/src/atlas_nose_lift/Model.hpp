@@ -39,7 +39,7 @@ inline bool atlas_model_matches(float hover, AtlasGroundModel &m) {
  float factor{}; param_t p=param_find("THR_MDL_FAC");
  if(p==PARAM_INVALID || param_get(p,&factor)!=0 || !std::isfinite(factor) || factor<0.f || factor>1.f) { PX4_ERR("THR_MDL_FAC must be within 0..1"); return false; }
  m.thr_fac=factor;
- if (!(m.mass>0.f && m.gx>0.f && m.moment>0.f && m.w9>0.f && m.w9<2.f && m.wc>=0.f && m.wc<2.f && (m.fc==0)==(m.wc==0.f))) {
+ if (!(m.mass>0.f && m.gx>0.f && m.moment>0.f && m.w9>0.f && m.w9<2.f && m.wc>=0.f && m.wc<2.f && (m.fc==0)==(m.wc<=0.f))) {   // a third fan exactly when it has a share
   PX4_ERR("NLF_MASS/GX/MOM/W9/WC out of range; Update PX4"); return false;
  }
  return true;

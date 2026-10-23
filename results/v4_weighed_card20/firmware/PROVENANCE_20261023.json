@@ -1,0 +1,12 @@
+{
+ "image": "px4_fmu-v6x_multicopter_v4_nose_lift_20261023.px4",
+ "sha256": "a15c0628b52ec86cb4775109f35ab2973f990c75685a1df83fa648c0088d95c1",
+ "built": "2026-10-23 14:03 local",
+ "target": "px4_fmu-v6x_multicopter + pwm_out_sim (HITL) + ATLAS external modules",
+ "px4": "~/PX4-Autopilot-atlas v1.18.0-beta1-647-g2a0e910923 (2a0e9109, the board's current base)",
+ "atlas_modules": "firmware/atlas from branch v4/nose-lift-module (20bf032 + Model.hpp float-compare fix)",
+ "toolchain": "arm-none-eabi-gcc 13.2.rel1",
+ "flash_used": "1893268 B of 1920 KB (96.3%)",
+ "flashed": false,
+ "note": "built only; not flashed. Revert image: archive 20261019-193544, params: board_backups/pixhawk_20261023-134458"
+}

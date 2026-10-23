@@ -68,6 +68,33 @@ Ground timeout initiates a two-second motor ramp-down and normal disarm, then ex
 
 The model's existing flight gains, 25° board offset, rotor geometry, CT=6.5 and KM=0.01 are retained. Flight rate limits are 220/220/200°/s. This is an experimental configuration validated as a whole, not evidence that each parameter is independently optimal.
 
+### Other layouts: which fans are the front (SMALL_SCALE_V4)
+
+The front fans are no longer motors 9 and 10 by definition. The exporter (`geometry/ground_sequence.py`) takes every fan
+ahead of the CG, picks the two that make opposite yaw as the pair (`NLF_FA`, `NLF_FB`, split by `NLF_W9` so they make no
+yaw) and gives a third, if there is one, a full share (`NLF_FC`, `NLF_WC = 1`); the pair's weights absorb the third
+fan's yaw. On the ten-motor layout that is 9, 10, none - exactly as before. V4 exports 7, 8 and its nose fan 9, with
+60 N m of nose-up authority about the rear feet. Commands go through PX4's thrust curve, so `THR_MDL_FAC` is read
+rather than required to be 0 (V4 flies with 1). The pilot handover and the simulation-manual mode describe eight rear
+motors and a pair on 9/10, and refuse any other layout.
+
+The thrust input the module gives PX4's land detector while it drives the motors directly is capped below the
+detector's maybe-landed threshold (`MPC_MANTHR_MIN` + 0.01): the aircraft is on its feet in every phase that sends it.
+Without the cap V4 was declared airborne half-way through the nose lift; with the tilted range finder as its height
+reference the estimate then jumped 0.24 m, the module read that as an early liftoff and handed the aircraft to PX4
+Land on the stand, which pitched it up at 77°/s. On the ten-motor layout the cap (0.072) lowers the hint only when the
+pair's thrust fractions add up to more than 0.9; that layout has not been re-flown since.
+
+V4 in SITL (10 kg, CG unchanged, hover pitch 18°, module takeoff to hover and module landing, still air):
+
+| Park | Stand to liftoff | Pitch after liftoff vs hover | Ground slide (lift / lowering) | Landing |
+|---:|---:|---|---|---|
+| −10° | 4.9 s | −4.0° .. +2.4° | 16 cm / 36 cm | rear 0.11 m/s, nose at 3°/s, disarmed |
+| −20° | 7.3 s | −4.9° .. +0.6° | 22 cm / 42 cm | rear 0.10 m/s, nose at 3°/s, disarmed |
+
+One run each, no wind, no Monte Carlo, SITL only. The slide is the front fans' horizontal component while the nose
+is tilted and has not been worked on.
+
 ## Validation and limits
 
 Four recorded successful runs: JSBSim seeds 1–3 and Python physics seed 1, with sensor noise enabled and still air. The first three preceded a narrowly scoped abort-cleanup fix; seed 3 exercises the final build. All reached hover without a nose-lift abort. Ground contact was preserved throughout nose rotation, ending at 24.18–24.35°.

@@ -20,6 +20,34 @@
       "port": 8087
     },
     {
+      "name": "v4-10kg-park-20",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd $HOME/AIRFRAME_REPRO/v3_sitl_20261019/designer && exec /Users/stefanosfragkoulis/Documents/UtopiaLabs/new/AIRFRAME_DESIGNER/.venv/bin/python -m airframe_designer ui --airframe $HOME/AIRFRAME_REPRO/v4_weighed_card20/airframe_V4_10kg_park-20.json --px4-instance 5 --http 127.0.0.1:8085 --no-browser --mode sitl"
+      ],
+      "port": 8085
+    },
+    {
+      "name": "v4-nose-lift",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "airframe_designer",
+        "ui",
+        "--airframe",
+        "/Users/stefanosfragkoulis/AIRFRAME_REPRO/v4_weighed_card20/airframe_V4_10kg_park-20_nlf.json",
+        "--px4-instance",
+        "4",
+        "--http",
+        "127.0.0.1:8084",
+        "--no-browser",
+        "--mode",
+        "sitl"
+      ],
+      "port": 8084
+    },
+    {
       "name": "airframe-designer",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": [

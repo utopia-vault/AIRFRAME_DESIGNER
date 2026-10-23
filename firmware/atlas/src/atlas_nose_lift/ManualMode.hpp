@@ -44,7 +44,8 @@
    updateParams();
    AtlasGroundModel candidate{};
    const float hover=_hover_param.get();
-   const bool geometry=atlas_model_matches(hover,candidate);
+   // this mode drives motors 9 and 10 as the front pair: the ten-motor layout only
+   const bool geometry=atlas_model_matches(hover,candidate) && candidate.ten_motor_pair();
    const bool settings=PX4_ISFINITE(_lift_target.get()) && PX4_ISFINITE(_rate.get()) && _rate.get()>=1 && _rate.get()<=15 &&
        PX4_ISFINITE(_ramp.get()) && _ramp.get()>=1 && _ramp.get()<=10;
    if(!_enable.get() || !geometry || !settings || aa.kill || aa.termination || !valid || !height_valid ||

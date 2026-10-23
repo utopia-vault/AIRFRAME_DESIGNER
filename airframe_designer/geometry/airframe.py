@@ -331,8 +331,9 @@ class Airframe:
                 shares, util = hover.get("shares", []), hover.get("hover_utilisation", [])
                 if shares and util and util[int(np.argmax(shares))]:
                     p.setdefault("MPC_THR_HOVER", round(min(0.8, max(0.2, float(np.sqrt(util[int(np.argmax(shares))])))), 2))
-            # the module commands the front fans as sqrt(thrust fraction) and checks that PX4 applies no thrust curve
-            p["THR_MDL_FAC"] = forced["THR_MDL_FAC"] = 0.0
+            # the module reads THR_MDL_FAC and commands the front fans through it, so any curve works; a design that
+            # does not set one gets PX4 commanding the quadratic fans directly, as the ten-motor model was tuned
+            p.setdefault("THR_MDL_FAC", 0.0)
             # stick override is built into this PX4: a stick moved faster than MAN_OVERRIDE_SPD (normalised travel per
             # second, 1.0 = full deflection within a second) switches Offboard/auto modes to Position; keep it enabled
             p.setdefault("MAN_OVERRIDE_SPD", 1.0)

@@ -79,7 +79,7 @@ private:
  bool _pilot_mode{false}, _ready_announced{false};
  float _flight_alt{1.f}, _pilot_cap{0.f};
  bool _pilot_ground_abort{false};
- float _pilot_abort_limit9{0.f}, _pilot_abort_limit10{0.f};
+ float _pilot_abort_limit9{0.f}, _pilot_abort_limit10{0.f}, _pilot_abort_limitc{0.f};
  // Pilot handover (NLF_PILOT): after the nose lift PX4 goes to Stabilized or Altitude mode and the pilot's throttle lifts
  // the aircraft. Nothing in this path needs a position estimate. The front-fan floor (allocator overlay, max of PX4's
  // command and the floor) keeps the nose up while the feet may touch and under a throttle cut; a stalled descent at low
@@ -100,16 +100,37 @@ private:
  float structural_pitch_deg(const vehicle_attitude_s &att) const {
   return math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
  }
- void publish_floor_front(hrt_abstime now, const vehicle_attitude_s &att, float c9, float c10) {
+ // The front fans are the model's (NLF_FA, NLF_FB: the yaw pair; NLF_FC: an optional third). _cmd9/_cmd10 are A and B,
+ // _cmdc the third. Commands go through PX4's thrust curve: a thrust fraction t is (1 - f) sqrt(t) + f t.
+ float to_cmd(float t) const { t=math::constrain(t,0.f,1.f); return (1.f-_ground.thr_fac)*sqrtf(t)+_ground.thr_fac*t; }
+ float to_thrust(float c) const { c=math::constrain(c,0.f,1.f); return (1.f-_ground.thr_fac)*c*c+_ground.thr_fac*c; }
+ void front_split(float frac, float delta) {
+  _cmd9=to_cmd(frac*(_ground.w9+delta)); _cmd10=to_cmd(frac*(2.f-_ground.w9-delta));
+  _cmdc=_ground.fc ? to_cmd(frac*_ground.wc) : 0.f;
+ }
+ void put_front(float *control, float a, float b, float c) const {
+  control[_ground.fa-1]=a; control[_ground.fb-1]=b; if (_ground.fc) { control[_ground.fc-1]=c; }
+ }
+ bool is_front(int i) const { return i==_ground.fa-1 || i==_ground.fb-1 || (_ground.fc && i==_ground.fc-1); }
+ // Thrust input for PX4's land detector while the module drives the motors directly (not a landed flag): 0.16 per unit of
+ // nose effort, which is 0.08 (t9 + t10) on the ten-motor layout. The aircraft is on its feet in every phase that
+ // publishes it, so it stays below the detector's maybe-landed threshold (MPC_MANTHR_MIN + 0.01 outside climb-rate
+ // control): PX4 believing it took off while the nose is coming up switches its estimator to in-air fusion, and with a
+ // tilted range finder as the height reference that moves the height estimate by tenths of a metre on the spot.
+ float front_thrust(float a, float b, float c) const {
+  const float effort=0.16f*(to_thrust(a)+to_thrust(b)+(_ground.fc ? to_thrust(c) : 0.f))/(2.f+_ground.wc);
+  return math::min(effort,0.8f*(_manthr_min.get()+0.01f));
+ }
+ void publish_floor_front(hrt_abstime now, const vehicle_attitude_s &att, float c9, float c10, float cc) {
   atlas_nose_lift_floor_s floor{}; floor.timestamp=now; floor.timestamp_sample=att.timestamp; floor.active=true;
   for (int i=0;i<12;i++) { floor.control[i]=NAN; }
-  floor.control[8]=math::constrain(c9,0.f,1.f); floor.control[9]=math::constrain(c10,0.f,1.f);
+  put_front(floor.control,math::constrain(c9,0.f,1.f),math::constrain(c10,0.f,1.f),math::constrain(cc,0.f,1.f));
   _floor_pub.publish(floor);
  }
  // Controlled nose lowering from the current front-fan commands (direct actuators in Offboard, the floor otherwise).
  void ground_lower(const vehicle_attitude_s &att, const vehicle_local_position_s &pos, hrt_abstime now, const char *why, bool capped) {
   _integral=0.f; _dwell=0; _contact_dwell=0; _phase_start=now;
-  _pilot_ground_abort=capped; _pilot_abort_limit9=_cmd9; _pilot_abort_limit10=_cmd10;
+  _pilot_ground_abort=capped; _pilot_abort_limit9=_cmd9; _pilot_abort_limit10=_cmd10; _pilot_abort_limitc=_cmdc;
   _phase=LowerNose; _touch_z=pos.z; _lower_target=structural_pitch_deg(att);
   NL_WARN("%s: lowering the nose", why);
  }
@@ -127,7 +148,7 @@ private:
  void pilot_abort(const vehicle_attitude_s &att, const vehicle_local_position_s &pos, hrt_abstime now) {
   clear_floor(); _integral=0.f; _dwell=0; _contact_dwell=0; _phase_start=now;
   if ((_phase==Prime || _phase==Lift) && _z-pos.z<.15f) {
-   _pilot_ground_abort=true; _pilot_abort_limit9=_cmd9; _pilot_abort_limit10=_cmd10;
+   _pilot_ground_abort=true; _pilot_abort_limit9=_cmd9; _pilot_abort_limit10=_cmd10; _pilot_abort_limitc=_cmdc;
    _phase=LowerNose; _touch_z=pos.z;
    _lower_target=math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
    PX4_WARN("pilot abort: controlled nose lowering");
@@ -146,8 +167,8 @@ private:
  hrt_abstime _start{}, _phase_start{}, _dwell{}, _last_command{};
  hrt_abstime _fade_start{};
  hrt_abstime _support_since{};   // Spool: when PX4's own allocation first matched the floor (must persist before fading)
- float _fade9{}, _fade10{}, _abort9{}, _abort10{};
- float _integral{}, _cmd9{}, _cmd10{};
+ float _fade9{}, _fade10{}, _fadec{}, _abort9{}, _abort10{}, _abortc{};
+ float _integral{}, _cmd9{}, _cmd10{}, _cmdc{};
  hrt_abstime _diagnostic_time{};
  uint8_t _xy_reset{}, _z_reset{}, _heading_reset{};
  float _pitch{}, _yaw{}, _x{}, _y{}, _z{}, _target_z{};
@@ -239,7 +260,8 @@ private:
   (ParamFloat<px4::params::NLF_TIMEOUT>) _timeout,
   (ParamFloat<px4::params::NLF_LAND_V>) _land_speed,
   (ParamFloat<px4::params::NLF_DOWN_R>) _down_rate,
-  (ParamFloat<px4::params::COM_DISARM_LAND>) _disarm_delay
+  (ParamFloat<px4::params::COM_DISARM_LAND>) _disarm_delay,
+  (ParamFloat<px4::params::MPC_MANTHR_MIN>) _manthr_min
  )
  void command(uint32_t cmd, float p1, float p2, const vehicle_status_s &status, float p3=0.f) {
   vehicle_command_s c{}; c.timestamp=hrt_absolute_time(); c.command=cmd; c.param1=p1; c.param2=p2; c.param3=p3;
@@ -267,7 +289,7 @@ private:
    NL_WARN("handing PX4 %s the aircraft", pilot_mode_name()); _phase=Failed; return;
   }
   if (!airborne && status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
-   _phase=Aborting; _phase_start=hrt_absolute_time(); _abort9=_cmd9; _abort10=_cmd10;
+   _phase=Aborting; _phase_start=hrt_absolute_time(); _abort9=_cmd9; _abort10=_cmd10; _abortc=_cmdc;
    return;
   }
   _phase=Failed;
@@ -328,7 +350,7 @@ private:
    // Pilot handover: the nose rests on its feet, PX4 is still in the pilot's mode. Ramp the floor out and disarm.
    if (!armed) { clear_floor(); NL_INFO("landing complete: all motors off and disarmed"); _phase=Idle; return; }
    const float scale=math::constrain(1.f-(now-_phase_start)*1e-6f/2.f,0.f,1.f);
-   publish_floor_front(now,att,_abort9*scale,_abort10*scale);
+   publish_floor_front(now,att,_abort9*scale,_abort10*scale,_abortc*scale);
    if (now-_phase_start>2500_ms && now-_last_command>1_s) {
     // PX4 declines a plain disarm until its land detector agrees; the nose has rested for seconds by then, so force it after 8 s
     command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM,0.f,now-_phase_start>8_s ? 21196.f : 0.f,status); _last_command=now;
@@ -350,9 +372,9 @@ private:
    offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
    actuator_motors_s motors{}; motors.timestamp=now; motors.timestamp_sample=att.timestamp;
    for(int i=0;i<12;i++) { motors.control[i]=NAN; }
-   motors.control[8]=_abort9*scale; motors.control[9]=_abort10*scale; _motors_pub.publish(motors);
+   put_front(motors.control,_abort9*scale,_abort10*scale,_abortc*scale); _motors_pub.publish(motors);
    vehicle_thrust_setpoint_s thrust{}; thrust.timestamp=now; thrust.timestamp_sample=att.timestamp;
-   thrust.xyz[2]=-0.08f*(motors.control[8]*motors.control[8]+motors.control[9]*motors.control[9]);
+   thrust.xyz[2]=-front_thrust(_abort9*scale,_abort10*scale,_abortc*scale);
    _thrust_pub.publish(thrust);
    if (armed && now-_phase_start>2500_ms && now-_last_command>1_s) {
     command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM,0.f,0.f,status); _last_command=now;
@@ -383,6 +405,7 @@ private:
 #endif
    _hover_angle=_hover_param.get();
    if (!atlas_model_matches(_hover_angle, _ground)) { NL_ERR("ground model configuration invalid; Update PX4"); return; }
+   if (want_pilot && !_ground.ten_motor_pair()) { NL_ERR("pilot handover needs the ten-motor layout (its hover pattern is eight rear motors)"); return; }
    if (!_enable.get() || armed || !land.landed || (!want_pilot && !pos.xy_valid) || !pos.z_valid || now-att.timestamp>200_ms
        || !PX4_ISFINITE(_pitch) || !PX4_ISFINITE(e.psi()) || !PX4_ISFINITE(pos.z)) {
     NL_ERR(want_pilot ? "requires enabled, disarmed, landed, fresh valid attitude and height" : "requires enabled, disarmed, landed, fresh valid attitude and position"); return;
@@ -406,7 +429,7 @@ private:
    _pilot_handover=want_pilot; _pilot_nav=_pilot.get()==2 ? vehicle_status_s::NAVIGATION_STATE_ALTCTL : vehicle_status_s::NAVIGATION_STATE_STAB;
    _landing=false; _handover_requested=false; _takeover_request=false; _was_high=false; _lift=0.f; _liftoff_since=0; _takeover_since=0; _stick_lost_since=0; _contact_dwell=0;
    _pilot_mode=!want_pilot && _rc_throttle.get()!=0; _pilot_gate.reset(); _pilot_cap=0.f; _pilot_ground_abort=false; _ready_announced=false; _flight_alt=_pilot_mode ? 1.f : _alt.get();
-   _phase=Prime; _start=now; _phase_start=now; _dwell=0; _fade_start=0; _integral=0.f; _cmd9=0.f; _cmd10=0.f; _last_command=0; _was_armed=false;
+   _phase=Prime; _start=now; _phase_start=now; _dwell=0; _fade_start=0; _integral=0.f; _cmd9=0.f; _cmd10=0.f; _cmdc=0.f; _last_command=0; _was_armed=false;
    _rest_pitch=math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
    _landing_angle=_land_angle_param.get();
    if (_landing_angle > _rest_pitch+3.f) {
@@ -499,7 +522,7 @@ private:
     // nose lift): nobody publishes motor samples any more, the output driver goes quiet and lockstep SITL stops
     // advancing. Keep zero samples flowing and hand the commander back to Hold before going idle.
     NL_INFO("released control on disarm; handing PX4 back to Hold");
-    _phase=Aborting; _released=true; _phase_start=now; _abort9=0.f; _abort10=0.f; _last_command=0; return;
+    _phase=Aborting; _released=true; _phase_start=now; _abort9=0.f; _abort10=0.f; _abortc=0.f; _last_command=0; return;
    }
    NL_INFO("released control on disarm or mode change"); _phase=Idle; return;
   }
@@ -540,29 +563,28 @@ private:
    _integral=math::constrain(_integral+error*0.004f,-40.f,40.f);
    const float ff=_ground.mass*9.80665f*(_ground.gx*cosf(theta)+_ground.gz*sinf(theta))/_ground.moment;
    const float frac=math::constrain(ff+0.02f*error+0.012f*_integral,0.f,1.f);
-   const float w9 = _ground.w9;
    const float delta=math::constrain(-3.f*omega(2),-0.25f,0.25f);
-   _cmd9=sqrtf(math::constrain(frac*(w9+delta),0.f,1.f));
-   _cmd10=sqrtf(math::constrain(frac*(2.f-w9-delta),0.f,1.f));
+   front_split(frac,delta);
    if (_pilot_ground_abort) {
     // Ground abort cannot demand more power than the pilot permitted at entry.
     // Keep per-fan limits so yaw weighting cannot increase either fan independently.
     _cmd9=AtlasPilotGate::abort_limit(_cmd9,_pilot_abort_limit9);
     _cmd10=AtlasPilotGate::abort_limit(_cmd10,_pilot_abort_limit10);
+    _cmdc=AtlasPilotGate::abort_limit(_cmdc,_pilot_abort_limitc);
    }
    if (status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
     offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
     actuator_motors_s motors{}; motors.timestamp=now; motors.timestamp_sample=att.timestamp;
     for (int i=0;i<12;i++) { motors.control[i]=NAN; }
-    motors.control[8]=_cmd9; motors.control[9]=_cmd10; _motors_pub.publish(motors);
+    put_front(motors.control,_cmd9,_cmd10,_cmdc); _motors_pub.publish(motors);
     vehicle_thrust_setpoint_s thrust{}; thrust.timestamp=now; thrust.timestamp_sample=att.timestamp;
-    thrust.xyz[2]=-0.08f*(_cmd9*_cmd9+_cmd10*_cmd10); _thrust_pub.publish(thrust);
+    thrust.xyz[2]=-front_thrust(_cmd9,_cmd10,_cmdc); _thrust_pub.publish(thrust);
    } else {
     // Pilot handover: PX4 is in the pilot's mode. Its attitude loop would fight a nose going below level (rear motors
     // up), so take the motors back through Offboard direct actuators; until PX4 switches, the floor carries the nose.
     offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
     if (now-_last_command>500_ms) { command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); _last_command=now; }
-    publish_floor_front(now,att,_cmd9,_cmd10);
+    publish_floor_front(now,att,_cmd9,_cmd10,_cmdc);
    }
    // A stopped pitch despite a continuing nose-down request indicates nose-foot support.
    // Require the resting posture and a bounded height change since rear contact.
@@ -580,7 +602,7 @@ private:
     if (!_dwell) { _dwell=now; }
     if (now-_dwell>1_s) {
      NL_INFO("landing: nose settled; ramping motors off");
-     _phase=Shutdown; _phase_start=now; _abort9=_cmd9; _abort10=_cmd10; _last_command=0;
+     _phase=Shutdown; _phase_start=now; _abort9=_cmd9; _abort10=_cmd10; _abortc=_cmdc; _last_command=0;
     }
    } else { _dwell=0; }
    if (now-_phase_start>45_s) { fail("nose lowering timeout",status,false); }
@@ -617,19 +639,17 @@ private:
    // Feedforward from the exported current mass, rear pivot and front fan moments.
    const float ff = _ground.mass*9.80665f*(_ground.gx*cosf(theta)+_ground.gz*sinf(theta))/_ground.moment;
    const float frac=math::constrain(ease*ff+0.02f*error+0.012f*_integral,0.f,1.f);
-   const float w9 = _ground.w9;
    const float delta=math::constrain(-3.f*omega(2),-0.25f,0.25f);
-   _cmd9=sqrtf(math::constrain(frac*(w9+delta),0.f,1.f));
-   _cmd10=sqrtf(math::constrain(frac*(2.f-w9-delta),0.f,1.f));
+   front_split(frac,delta);
    if (_pilot_mode && _phase==Lift) {
     // During the low-stick confirmation interval keep support instead of
     // dropping power to zero before the controlled-abort path has taken over.
     if (!_pilot_gate.low_since) {
      _pilot_cap=math::constrain(throttle,math::max(0.f,_pilot_cap-0.2f*0.004f),_pilot_cap+0.2f*0.004f);
     }
-    const float largest=math::max(_cmd9,_cmd10);
+    const float largest=math::max(math::max(_cmd9,_cmd10),_cmdc);
     const float scale=largest>_pilot_cap && largest>0.f ? _pilot_cap/largest : 1.f;
-    _cmd9*=scale; _cmd10*=scale;
+    _cmd9*=scale; _cmd10*=scale; _cmdc*=scale;
    }
    if (_phase==Lift && elapsed>(_pilot_mode ? 55.f : _timeout.get())) {
     if (_pilot_mode) { NL_WARN("staged ground wait timed out: lowering with existing power limit"); pilot_abort(att,pos,now); return; }
@@ -664,12 +684,12 @@ private:
    mode.direct_actuator=true; _mode_pub.publish(mode);
    actuator_motors_s motors{}; motors.timestamp=now; motors.timestamp_sample=att.timestamp;
    for (int i=0;i<actuator_motors_s::NUM_CONTROLS;i++) { motors.control[i]=NAN; }
-   if (_phase==Lift) { motors.control[8]=_cmd9; motors.control[9]=_cmd10; }
+   if (_phase==Lift) { put_front(motors.control,_cmd9,_cmd10,_cmdc); }
    _motors_pub.publish(motors);
    // Direct actuator control otherwise leaves PX4's thrust input stale. Supply the
    // requested collective thrust fraction for landing detection (not a landed flag).
    vehicle_thrust_setpoint_s thrust{}; thrust.timestamp=now; thrust.timestamp_sample=att.timestamp;
-   thrust.xyz[2]=_phase==Lift ? -0.08f*(_cmd9*_cmd9+_cmd10*_cmd10) : 0.f;
+   thrust.xyz[2]=_phase==Lift ? -front_thrust(_cmd9,_cmd10,_cmdc) : 0.f;
    _thrust_pub.publish(thrust);
   } else if (_phase==PilotGround) {
    // The module flies the ground with the pilot's throttle: the rear motors follow the model's zero-torque hover
@@ -691,14 +711,14 @@ private:
    const float base=(_lift<1.f) ? ff*(1.f-_lift)+_lift*_uf.get() : _uf.get()*_lift;
    const float frac=math::constrain(base+0.02f*error+0.012f*_integral,0.f,1.f);
    const float delta=math::constrain(-3.f*omega(2),-0.25f,0.25f);
-   _cmd9=sqrtf(math::constrain(frac*(_ground.w9+delta),0.f,1.f));
-   _cmd10=sqrtf(math::constrain(frac*(2.f-_ground.w9-delta),0.f,1.f));
+   front_split(frac,delta);
    mode.direct_actuator=true; _mode_pub.publish(mode);
    actuator_motors_s motors{}; motors.timestamp=now; motors.timestamp_sample=att.timestamp;
    for (int i=0;i<actuator_motors_s::NUM_CONTROLS;i++) { motors.control[i]=NAN; }
+   // the hover pattern is the ten-motor layout's (the takeoff request refuses the pilot handover on any other)
    const float pattern[8]={_u1.get(),_u2.get(),_u3.get(),_u4.get(),_u5.get(),_u6.get(),_u7.get(),_u8.get()};
-   for (int i=0;i<8;i++) { motors.control[i]=sqrtf(math::constrain(pattern[i]*_lift,0.f,1.f)); }
-   motors.control[8]=_cmd9; motors.control[9]=_cmd10; _motors_pub.publish(motors);
+   for (int i=0;i<8;i++) { motors.control[i]=to_cmd(pattern[i]*_lift); }
+   put_front(motors.control,_cmd9,_cmd10,_cmdc); _motors_pub.publish(motors);
    vehicle_thrust_setpoint_s thrust{}; thrust.timestamp=now; thrust.timestamp_sample=att.timestamp;
    thrust.xyz[2]=-math::constrain(0.6f*_lift,0.f,1.f); _thrust_pub.publish(thrust);
    if (!_landing) {
@@ -754,35 +774,37 @@ private:
     if (!output.active || output.timestamp < _phase_start) {
      actuator_motors_s bridge{}; bridge.timestamp=now; bridge.timestamp_sample=att.timestamp;
      for (int i=0;i<12;i++) { bridge.control[i]=NAN; }
-     bridge.control[8]=_cmd9; bridge.control[9]=_cmd10;
+     put_front(bridge.control,_cmd9,_cmd10,_cmdc);
      _motors_pub.publish(bridge);
     }
     // Compare unmodified allocation against support, avoiding feedback through the floor. A momentary match is not
     // enough: right after the mode switch the attitude loop alone can put the front fans above the floor while the
     // takeoff ramp still has the rear motors at zero, and fading then drops the nose and skids the aircraft forward.
     // Require a continuous 150 ms allocation match before fading the front support.
-    const bool supported = output.active && now-output.timestamp<100_ms && output.control[8]>=0.95f*_cmd9 && output.control[9]>=0.95f*_cmd10;
+    const bool supported = output.active && now-output.timestamp<100_ms && output.control[_ground.fa-1]>=0.95f*_cmd9
+        && output.control[_ground.fb-1]>=0.95f*_cmd10 && (!_ground.fc || output.control[_ground.fc-1]>=0.95f*_cmdc);
     if (!supported) { _support_since=0; } else if (!_support_since) { _support_since=now; }
     if (!_fade_start && supported && now-_support_since>=150_ms) {
-     _fade_start=now; _fade9=_cmd9; _fade10=_cmd10; NL_INFO("PX4 supports nose and is lifting; fading motor floor");
+     _fade_start=now; _fade9=_cmd9; _fade10=_cmd10; _fadec=_cmdc; NL_INFO("PX4 supports nose and is lifting; fading motor floor");
     }
     if (now-_phase_start>15_s && !_fade_start) { fail("handover timeout",status,!land.landed); return; }
     atlas_nose_lift_floor_s floor{}; floor.timestamp=now; floor.timestamp_sample=att.timestamp; floor.active=true;
     for(int i=0;i<12;i++) { floor.control[i]=NAN; }
     // Rear motors: while the rear feet touch, the aircraft cannot tilt to counter the front fans' rearward push and
     // slides on its feet. Floor the rear motors with a fast ramp so the feet leave the ground at once; release the
-    // floor a second after the aircraft is airborne (PX4 is in charge by then). Roll stays neutral: all eight equal.
+    // floor a second after the aircraft is airborne (PX4 is in charge by then). Roll stays neutral: all rear equal.
     if (!_rear_fade_start && _spool_z-pos.z>0.10f) { _rear_fade_start=now; NL_INFO("airborne; releasing the rear floor"); }
     const float rear_ramp=math::constrain((now-_phase_start)*1e-6f/math::max(0.2f,_spool_t.get()),0.f,1.f);
     // The front floor was only holding the nose while the rear feet carried the weight: hand the nose to PX4's
     // attitude loop as the rear lifts (a held front floor pins the nose up and PX4 cannot lower it).
     const float front_scale=(_spool_cmd.get()>0.f) ? (1.f-rear_ramp) : 1.f;
     const float fade = _fade_start ? math::constrain(1.f-(now-_fade_start)*1e-6f/1.f,0.f,1.f) : 1.f;
-    floor.control[8]=(_fade_start ? math::min(_cmd9,_fade9*fade) : _cmd9)*front_scale;
-    floor.control[9]=(_fade_start ? math::min(_cmd10,_fade10*fade) : _cmd10)*front_scale;
+    put_front(floor.control,(_fade_start ? math::min(_cmd9,_fade9*fade) : _cmd9)*front_scale,
+              (_fade_start ? math::min(_cmd10,_fade10*fade) : _cmd10)*front_scale,
+              (_fade_start ? math::min(_cmdc,_fadec*fade) : _cmdc)*front_scale);
     const float rear_fade=_rear_fade_start ? math::constrain(1.f-(now-_rear_fade_start)*1e-6f/1.f,0.f,1.f) : 1.f;
     const float rear=math::constrain(_spool_cmd.get(),0.f,1.f)*rear_ramp*rear_fade;
-    if (rear>0.f) { for (int i=0;i<8;i++) { floor.control[i]=rear; } }
+    if (rear>0.f) { for (int i=0;i<math::min((int)_ground.count,12);i++) { if (!is_front(i)) { floor.control[i]=rear; } } }
     _floor_pub.publish(floor);
     if (_fade_start && now-_fade_start>1_s) { _phase=Climb; _phase_start=now; NL_INFO("handover complete"); }
    }

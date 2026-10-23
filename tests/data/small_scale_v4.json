@@ -1,0 +1,1925 @@
+{
+ "schema": 2,
+ "name": "SMALL_SCALE_V4 (10 kg, park -20, test fixture)",
+ "mass": {
+  "mass": 10.0,
+  "cg": [
+   -0.1994,
+   0.0012,
+   -0.4319
+  ],
+  "inertia": [
+   0.661194,
+   0.890598,
+   1.221269
+  ],
+  "inertia_products": [
+   0.000224,
+   -0.20597,
+   0.000821
+  ],
+  "items": [
+   {
+    "name": "battery_1600mAh__M100g",
+    "mass": 0.0746268656716418,
+    "pos": [
+     0.04250000000000017,
+     0.0834999999999996,
+     -0.5752999999999999
+    ],
+    "inertia": [
+     6.918532338308456e-05,
+     8.240049751243773e-06,
+     7.618159203980101e-05
+    ],
+    "inertia_products": [
+     2.207054623803851e-18,
+     -4.297944775659398e-22,
+     9.26691968148993e-22
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g",
+    "mass": 0.24091119402985078,
+    "pos": [
+     -0.3498021811510427,
+     -0.1497338105779603,
+     -0.37040740364581437
+    ],
+    "inertia": [
+     0.00015382669921166895,
+     0.0002862072742506078,
+     0.0002838945056371267
+    ],
+    "inertia_products": [
+     -1.8644655496668134e-05,
+     -3.229822490116319e-05,
+     1.999101516284432e-06
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g (2)",
+    "mass": 0.005357462686567165,
+    "pos": [
+     -0.28947353173915996,
+     -0.15780993631380322,
+     -0.38439515671190155
+    ],
+    "inertia": [
+     6.634443093500124e-07,
+     4.6316900491151907e-07,
+     4.704899672190969e-07
+    ],
+    "inertia_products": [
+     2.7322239919324206e-08,
+     4.732346750996051e-08,
+     -6.340148487577873e-09
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g (3)",
+    "mass": 0.24091119402985078,
+    "pos": [
+     -0.34980218115104267,
+     -0.25816019113177235,
+     -0.3078074036458143
+    ],
+    "inertia": [
+     0.000153826699211669,
+     0.00028620727425060787,
+     0.00028389450563712655
+    ],
+    "inertia_products": [
+     -1.864465549666816e-05,
+     -3.229822490116318e-05,
+     1.9991015162844667e-06
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g (4)",
+    "mass": 0.005357462686567165,
+    "pos": [
+     -0.2894735317391599,
+     -0.2662363168676153,
+     -0.3217951567119015
+    ],
+    "inertia": [
+     6.634443093500245e-07,
+     4.6316900491148567e-07,
+     4.704899672190558e-07
+    ],
+    "inertia_products": [
+     2.7322239919331982e-08,
+     4.732346750994139e-08,
+     -6.34014848757765e-09
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g (5)",
+    "mass": 0.24091119402985078,
+    "pos": [
+     -0.34980218115104267,
+     -0.36658657168558423,
+     -0.2452074036458134
+    ],
+    "inertia": [
+     0.00015382669921166895,
+     0.00028620727425060803,
+     0.0002838945056371269
+    ],
+    "inertia_products": [
+     -1.8644655496668192e-05,
+     -3.229822490116318e-05,
+     1.999101516284438e-06
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g (6)",
+    "mass": 0.005357462686567165,
+    "pos": [
+     -0.2894735317391599,
+     -0.37466269742142716,
+     -0.2591951567119006
+    ],
+    "inertia": [
+     6.634443093500087e-07,
+     4.631690049115202e-07,
+     4.70489967219098e-07
+    ],
+    "inertia_products": [
+     2.7322239919335817e-08,
+     4.7323467509962545e-08,
+     -6.340148487582218e-09
+    ]
+   },
+   {
+    "name": "ESC__M200g",
+    "mass": 0.09919925373134328,
+    "pos": [
+     -0.36947130925664623,
+     -0.401239451022976,
+     -0.31805954855944285
+    ],
+    "inertia": [
+     4.5608700252270545e-05,
+     3.4118364304991557e-05,
+     5.478501684439655e-05
+    ],
+    "inertia_products": [
+     -2.810407252974859e-06,
+     -4.873957166703569e-06,
+     -1.7874748393409702e-05
+    ]
+   },
+   {
+    "name": "ESC__M200g (2)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     -0.3747382751670458,
+     -0.3988267977302114,
+     -0.34214996315302143
+    ],
+    "inertia": [
+     7.237433687172719e-06,
+     1.6961141705941044e-05,
+     1.7246668731413307e-05
+    ],
+    "inertia_products": [
+     -1.4653147825541946e-06,
+     -2.5379996447918255e-06,
+     -2.4727369201076067e-07
+    ]
+   },
+   {
+    "name": "ESC__M200g (3)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     -0.36947130925664423,
+     -0.305976656606688,
+     -0.3730595485594418
+    ],
+    "inertia": [
+     4.56087002522706e-05,
+     3.411836430499159e-05,
+     5.4785016844396495e-05
+    ],
+    "inertia_products": [
+     -2.8104072529748984e-06,
+     -4.873957166703629e-06,
+     -1.7874748393409712e-05
+    ]
+   },
+   {
+    "name": "ESC__M200g (4)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     -0.37473827516704383,
+     -0.30356400331392347,
+     -0.3971499631530203
+    ],
+    "inertia": [
+     7.2374336871728695e-06,
+     1.6961141705941092e-05,
+     1.724666873141329e-05
+    ],
+    "inertia_products": [
+     -1.4653147825542268e-06,
+     -2.5379996447918492e-06,
+     -2.4727369201079455e-07
+    ]
+   },
+   {
+    "name": "ESC__M200g (5)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     -0.3694713092566433,
+     -0.2020536081525549,
+     -0.4330595485594418
+    ],
+    "inertia": [
+     4.5608700252270646e-05,
+     3.411836430499158e-05,
+     5.4785016844396454e-05
+    ],
+    "inertia_products": [
+     -2.810407252974951e-06,
+     -4.873957166703676e-06,
+     -1.7874748393409682e-05
+    ]
+   },
+   {
+    "name": "ESC__M200g (6)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     -0.374738275167043,
+     -0.1996409548597904,
+     -0.4571499631530203
+    ],
+    "inertia": [
+     7.237433687172823e-06,
+     1.6961141705941126e-05,
+     1.724666873141329e-05
+    ],
+    "inertia_products": [
+     -1.4653147825542306e-06,
+     -2.537999644791882e-06,
+     -2.472736920107541e-07
+    ]
+   },
+   {
+    "name": "PDB_XT90PW-F__M175g",
+    "mass": 0.11107313432835822,
+    "pos": [
+     -0.40660306476453456,
+     -0.25829570520986894,
+     -0.43569314731609377
+    ],
+    "inertia": [
+     6.38098049803069e-05,
+     8.305901598294528e-05,
+     9.194134085031072e-05
+    ],
+    "inertia_products": [
+     -9.378319749540903e-06,
+     -1.1044441521020775e-05,
+     -2.7096313922417642e-05
+    ]
+   },
+   {
+    "name": "PDB_XT90PW-F__M175g (2)",
+    "mass": 0.019523880597014927,
+    "pos": [
+     -0.40776254147638374,
+     -0.26950816746066525,
+     -0.44913331811930357
+    ],
+    "inertia": [
+     1.7884626973978476e-05,
+     2.147140846268965e-05,
+     2.398366383202011e-05
+    ],
+    "inertia_products": [
+     -2.477405126478806e-06,
+     -2.7876308746718273e-06,
+     -7.573804209405707e-06
+    ]
+   },
+   {
+    "name": "PDB_XT90PW-F__M175g (3)",
+    "mass": 0.11107313432835822,
+    "pos": [
+     0.14897570152033346,
+     0.003339648927031907,
+     -0.5625272361021623
+    ],
+    "inertia": [
+     6.001485086066179e-05,
+     6.0043482812621786e-05,
+     0.00011875182814027934
+    ],
+    "inertia_products": [
+     -5.203698134237178e-09,
+     1.1967585506307798e-06,
+     2.487429392450782e-07
+    ]
+   },
+   {
+    "name": "PDB_XT90PW-F__M175g (4)",
+    "mass": 0.019523880597014927,
+    "pos": [
+     0.15266919069882992,
+     0.003403732005814902,
+     -0.5796752948330405
+    ],
+    "inertia": [
+     1.686363806349985e-05,
+     1.5046670235757095e-05,
+     3.142939096943138e-05
+    ],
+    "inertia_products": [
+     4.06455482803193e-09,
+     1.3830963393664974e-07,
+     6.991391079329144e-08
+    ]
+   },
+   {
+    "name": "ESC__M200g (7)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     0.24670769349463456,
+     -0.12959134444501527,
+     -0.5440867886578828
+    ],
+    "inertia": [
+     2.391537254295984e-05,
+     6.651685373283882e-05,
+     4.407985512586005e-05
+    ],
+    "inertia_products": [
+     1.9467346385865923e-06,
+     6.570982612271199e-07,
+     1.0425250470841188e-07
+    ]
+   },
+   {
+    "name": "ESC__M200g (8)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     0.2617405952797857,
+     -0.14928000649760556,
+     -0.5435591982866758
+    ],
+    "inertia": [
+     1.6810061281451817e-05,
+     1.8171869626390974e-05,
+     6.463313216684312e-06
+    ],
+    "inertia_products": [
+     6.066190515080321e-08,
+     -3.390915579784102e-07,
+     2.318196709652843e-08
+    ]
+   },
+   {
+    "name": "ESC__M200g (9)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     0.19783832864282067,
+     -0.00014464710366130784,
+     -0.5209068296843882
+    ],
+    "inertia": [
+     6.657980750239966e-05,
+     2.3807058757906416e-05,
+     4.4125215141352665e-05
+    ],
+    "inertia_products": [
+     2.902713616095017e-07,
+     -7.361817181939354e-07,
+     -2.7205016754170058e-08
+    ]
+   },
+   {
+    "name": "ESC__M200g (10)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     0.17739948852169682,
+     -0.014135697820499159,
+     -0.5215504253998111
+    ],
+    "inertia": [
+     1.8162081921742166e-05,
+     1.681841145382734e-05,
+     6.46475074895762e-06
+    ],
+    "inertia_products": [
+     8.926098963115462e-09,
+     -3.8324547051962726e-07,
+     1.9040896137232925e-08
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     0.24670769349463456,
+     0.12959134444501522,
+     -0.5440867886578828
+    ],
+    "inertia": [
+     2.391537254295984e-05,
+     6.65168537328388e-05,
+     4.4079855125860065e-05
+    ],
+    "inertia_products": [
+     -1.946734638586588e-06,
+     6.570982612271208e-07,
+     -1.0425250470841107e-07
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (2)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     0.2617405952797858,
+     0.14928000649760573,
+     -0.5435591982866758
+    ],
+    "inertia": [
+     1.681006128135137e-05,
+     1.8171869626389362e-05,
+     6.463313216783304e-06
+    ],
+    "inertia_products": [
+     -6.066190515031593e-08,
+     -3.3909155948646144e-07,
+     -2.3181967027924593e-08
+    ]
+   },
+   {
+    "name": "BATTERY_3PACK_01__M700g",
+    "mass": 0.5223880597014925,
+    "pos": [
+     -0.14500000000000002,
+     -0.05499999999999998,
+     -0.58
+    ],
+    "inertia": [
+     0.0002176616915423059,
+     0.0012232587064676904,
+     0.0012232587064676618
+    ],
+    "inertia_products": [
+     -6.157505827802513e-20,
+     -6.157505827802338e-20,
+     2.2123994890970557e-18
+    ]
+   },
+   {
+    "name": "BATTERY_3PACK_02__M700g",
+    "mass": 0.5223880597014925,
+    "pos": [
+     -0.14500000000000002,
+     9.094048159691092e-18,
+     -0.58
+    ],
+    "inertia": [
+     0.0002176616915423413,
+     0.001223258706467726,
+     0.001223258706467664
+    ],
+    "inertia_products": [
+     -6.126175086221863e-20,
+     8.788022898110202e-18,
+     -2.8112479692373777e-22
+    ]
+   },
+   {
+    "name": "BATTERY_3PACK_03__M700g",
+    "mass": 0.5223880597014925,
+    "pos": [
+     -0.14500000000000002,
+     0.055,
+     -0.58
+    ],
+    "inertia": [
+     0.0002176616915423059,
+     0.001223258706467726,
+     0.0012232587064676618
+    ],
+    "inertia_products": [
+     -6.146749305522918e-19,
+     8.7880228981102e-18,
+     -6.637198467291168e-18
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g(Mirror)",
+    "mass": 0.24091119402985078,
+    "pos": [
+     -0.34980218061371227,
+     0.14973381064923733,
+     -0.370407403771113
+    ],
+    "inertia": [
+     0.00015382669551973865,
+     0.0002862072669163427,
+     0.000283894498343708
+    ],
+    "inertia_products": [
+     1.8644654976098927e-05,
+     -3.22982240061172e-05,
+     -1.999101479263327e-06
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g(Mirror) (2)",
+    "mass": 0.005357462686567165,
+    "pos": [
+     -0.28947353280503096,
+     0.15780993623940015,
+     -0.3843951564272241
+    ],
+    "inertia": [
+     6.634443894801068e-07,
+     4.6316901241792584e-07,
+     4.7048997855207125e-07
+    ],
+    "inertia_products": [
+     -2.7322247076168317e-08,
+     4.7323486044209226e-08,
+     6.3401501759835636e-09
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g(Mirror) (3)",
+    "mass": 0.24091119402985078,
+    "pos": [
+     -0.34980218061371227,
+     0.25816019120304934,
+     -0.307807403771113
+    ],
+    "inertia": [
+     0.000153826695519739,
+     0.00028620726691634305,
+     0.00028389449834370764
+    ],
+    "inertia_products": [
+     1.8644654976098978e-05,
+     -3.22982240061173e-05,
+     -1.999101479263352e-06
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g(Mirror) (4)",
+    "mass": 0.005357462686567165,
+    "pos": [
+     -0.28947353280503096,
+     0.2662363167932122,
+     -0.3217951564272241
+    ],
+    "inertia": [
+     6.634443894801139e-07,
+     4.631690124179104e-07,
+     4.7048997855205955e-07
+    ],
+    "inertia_products": [
+     -2.7322247076169753e-08,
+     4.73234860441967e-08,
+     6.3401501759822384e-09
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g(Mirror) (5)",
+    "mass": 0.24091119402985078,
+    "pos": [
+     -0.34980218061371227,
+     0.36658657175686127,
+     -0.24520740377111191
+    ],
+    "inertia": [
+     0.00015382669551973886,
+     0.00028620726691634403,
+     0.0002838944983437094
+    ],
+    "inertia_products": [
+     1.8644654976099103e-05,
+     -3.2298224006117374e-05,
+     -1.9991014792633684e-06
+    ]
+   },
+   {
+    "name": "XFLY 80mm EDF__M330g(Mirror) (6)",
+    "mass": 0.005357462686567165,
+    "pos": [
+     -0.28947353280503096,
+     0.3746626973470241,
+     -0.2591951564272231
+    ],
+    "inertia": [
+     6.634443894801099e-07,
+     4.6316901241792595e-07,
+     4.704899785520905e-07
+    ],
+    "inertia_products": [
+     -2.7322247076170726e-08,
+     4.732348604420153e-08,
+     6.340150175983203e-09
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (1)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     -0.3694713092566462,
+     0.401239451022976,
+     -0.31805954855944285
+    ],
+    "inertia": [
+     4.5608700252270565e-05,
+     3.4118364304991557e-05,
+     5.478501684439656e-05
+    ],
+    "inertia_products": [
+     2.810407252974863e-06,
+     -4.873957166703568e-06,
+     1.7874748393409712e-05
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (1) (2)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     -0.3747382751670457,
+     0.3988267977302115,
+     -0.3421499631530216
+    ],
+    "inertia": [
+     7.237433687173028e-06,
+     1.6961141705600307e-05,
+     1.7246668731750758e-05
+    ],
+    "inertia_products": [
+     1.4653147838194609e-06,
+     -2.537999644060621e-06,
+     2.472736918148867e-07
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (1) (3)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     -0.36947130925664323,
+     0.20205360815255496,
+     -0.4330595485594418
+    ],
+    "inertia": [
+     4.560870025227064e-05,
+     3.411836430499158e-05,
+     5.4785016844396434e-05
+    ],
+    "inertia_products": [
+     2.8104072529749517e-06,
+     -4.873957166703673e-06,
+     1.787474839340968e-05
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (1) (4)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     -0.37473827516704294,
+     0.19964095485979053,
+     -0.4571499631530205
+    ],
+    "inertia": [
+     7.237433687173136e-06,
+     1.6961141705600395e-05,
+     1.7246668731750738e-05
+    ],
+    "inertia_products": [
+     1.465314783819502e-06,
+     -2.5379996440606756e-06,
+     2.4727369181490733e-07
+    ]
+   },
+   {
+    "name": "PDB_XT90PW-F__M175g(Mirror)",
+    "mass": 0.11107313432835822,
+    "pos": [
+     -0.4066030647645345,
+     0.25829570520986894,
+     -0.43569314731609377
+    ],
+    "inertia": [
+     6.380980498030692e-05,
+     8.305901598294529e-05,
+     9.194134085031074e-05
+    ],
+    "inertia_products": [
+     9.378319749540897e-06,
+     -1.1044441521020768e-05,
+     2.709631392241763e-05
+    ]
+   },
+   {
+    "name": "PDB_XT90PW-F__M175g(Mirror) (2)",
+    "mass": 0.019523880597014927,
+    "pos": [
+     -0.4077625414763837,
+     0.26950816746066525,
+     -0.4491333181193035
+    ],
+    "inertia": [
+     1.788462697397848e-05,
+     2.1471408462689644e-05,
+     2.39836638320201e-05
+    ],
+    "inertia_products": [
+     2.4774051264788e-06,
+     -2.7876308746718286e-06,
+     7.5738042094057e-06
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (2)",
+    "mass": 0.09919925373134328,
+    "pos": [
+     -0.3694713092566442,
+     0.305976656606688,
+     -0.3730595485594418
+    ],
+    "inertia": [
+     4.5608700252270565e-05,
+     3.411836430499158e-05,
+     5.478501684439644e-05
+    ],
+    "inertia_products": [
+     2.8104072529749123e-06,
+     -4.873957166703607e-06,
+     1.7874748393409695e-05
+    ]
+   },
+   {
+    "name": "ESC__M200g(Mirror) (2) (2)",
+    "mass": 0.0500544776119403,
+    "pos": [
+     -0.37473827516704383,
+     0.3035640033139235,
+     -0.39714996315302054
+    ],
+    "inertia": [
+     7.2374336871731025e-06,
+     1.6961141705600347e-05,
+     1.7246668731750738e-05
+    ],
+    "inertia_products": [
+     1.4653147838194893e-06,
+     -2.5379996440606442e-06,
+     2.4727369181490696e-07
+    ]
+   },
+   {
+    "name": "unlabelled remainder (weighed set exact3s minus the labelled CAD parts)",
+    "mass": 5.145522388059701,
+    "pos": [
+     -0.18258,
+     0.00118,
+     -0.41604
+    ],
+    "inertia": [
+     0.3587380597014926,
+     0.6286365671641791,
+     0.8094649253731344
+    ],
+    "inertia_products": [
+     -0.001265671641791045,
+     -0.13099850746268657,
+     0.0016119402985074627
+    ]
+   }
+  ],
+  "from_items": true,
+  "manual": {
+   "mass": 13.4,
+   "cg": [
+    -0.1994,
+    0.0012,
+    -0.4319
+   ],
+   "inertia": [
+    0.886,
+    1.1934,
+    1.6365
+   ],
+   "inertia_products": [
+    0.0003,
+    -0.276,
+    0.0011
+   ]
+  }
+ },
+ "body": {
+  "size": [
+   1.165,
+   1.238,
+   0.809
+  ],
+  "drag_quadratic": [
+   0.18,
+   0.18,
+   0.37
+  ],
+  "drag_angular": [
+   0.02,
+   0.02,
+   0.02
+  ],
+  "drag_center": [
+   -0.19,
+   -0.0021,
+   -0.4532
+  ]
+ },
+ "rotors": [
+  {
+   "name": "M1",
+   "pos": [
+    -0.531,
+    -0.322,
+    -0.157
+   ],
+   "axis": [
+    0.38268306645330297,
+    -0.46194008021636385,
+    -0.8001031389387223
+   ],
+   "km": 0.006,
+   "max_thrust": 28.5,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M2",
+   "pos": [
+    -0.531,
+    0.322,
+    -0.157
+   ],
+   "axis": [
+    0.38268306645330297,
+    0.46194008021636385,
+    -0.8001031389387223
+   ],
+   "km": 0.006,
+   "max_thrust": 28.5,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M3",
+   "pos": [
+    -0.531,
+    -0.214,
+    -0.2195
+   ],
+   "axis": [
+    0.38268306645330297,
+    -0.46194008021636385,
+    -0.8001031389387223
+   ],
+   "km": 0.006,
+   "max_thrust": 28.5,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M4",
+   "pos": [
+    -0.531,
+    0.214,
+    -0.2195
+   ],
+   "axis": [
+    0.38268306645330297,
+    0.46194008021636385,
+    -0.8001031389387223
+   ],
+   "km": 0.006,
+   "max_thrust": 28.5,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M5",
+   "pos": [
+    -0.531,
+    -0.1055,
+    -0.282
+   ],
+   "axis": [
+    0.38268306645330297,
+    -0.46194008021636385,
+    -0.8001031389387223
+   ],
+   "km": 0.006,
+   "max_thrust": 28.5,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M6",
+   "pos": [
+    -0.531,
+    0.1055,
+    -0.282
+   ],
+   "axis": [
+    0.38268306645330297,
+    0.46194008021636385,
+    -0.8001031389387223
+   ],
+   "km": 0.006,
+   "max_thrust": 28.5,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M7",
+   "pos": [
+    0.25502,
+    -0.06412,
+    -0.51995
+   ],
+   "axis": [
+    0.0,
+    0.500011022880005,
+    -0.8660190396281662
+   ],
+   "km": 0.006,
+   "max_thrust": 32,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M8",
+   "pos": [
+    0.25502,
+    0.06412,
+    -0.51995
+   ],
+   "axis": [
+    0.0,
+    -0.500011022880005,
+    -0.8660190396281662
+   ],
+   "km": 0.006,
+   "max_thrust": 32,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "M9",
+   "pos": [
+    0.355,
+    0,
+    -0.50735
+   ],
+   "axis": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "km": 0.006,
+   "max_thrust": 32,
+   "max_power_w": 0,
+   "tau": 0.055,
+   "diameter": 0.08,
+   "thrust_exponent": 2,
+   "enabled": true,
+   "pair": ""
+  }
+ ],
+ "wings": [],
+ "legs": [
+  {
+   "name": "F",
+   "attach": [
+    0.573,
+    0,
+    -0.42000000000000004
+   ],
+   "length": 0.0677,
+   "tilt_deg": 0,
+   "cant_deg": 0,
+   "foot_radius": 0.01,
+   "stiffness": 5066.8,
+   "damping": 258.9,
+   "friction": 0.6,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "RL",
+   "attach": [
+    -0.395,
+    -0.595,
+    -0.03
+   ],
+   "length": 0.029999999999999992,
+   "tilt_deg": 0,
+   "cant_deg": 0,
+   "foot_radius": 0.01,
+   "stiffness": 5066.8,
+   "damping": 258.9,
+   "friction": 0.6,
+   "enabled": true,
+   "pair": ""
+  },
+  {
+   "name": "RR",
+   "attach": [
+    -0.395,
+    0.595,
+    -0.03
+   ],
+   "length": 0.029999999999999992,
+   "tilt_deg": 0,
+   "cant_deg": 0,
+   "foot_radius": 0.01,
+   "stiffness": 5066.8,
+   "damping": 258.9,
+   "friction": 0.6,
+   "enabled": true,
+   "pair": ""
+  }
+ ],
+ "hover_pitch_deg": 18.0,
+ "landed_pitch_deg": -20.0,
+ "px4_overrides": {
+  "CA_AIRFRAME": 0,
+  "CA_ROTOR0_AX": 0,
+  "CA_ROTOR0_AY": 0,
+  "CA_ROTOR0_AZ": -1,
+  "CA_ROTOR0_CT": 5.164,
+  "CA_ROTOR0_KM": 0.1513,
+  "CA_ROTOR0_PX": -0.1782,
+  "CA_ROTOR0_PY": -0.5172,
+  "CA_ROTOR0_PZ": 0.3717,
+  "CA_ROTOR1_AX": 0,
+  "CA_ROTOR1_AY": 0,
+  "CA_ROTOR1_AZ": -1,
+  "CA_ROTOR1_CT": 5.164,
+  "CA_ROTOR1_KM": -0.1391,
+  "CA_ROTOR1_PX": -0.1845,
+  "CA_ROTOR1_PY": 0.5159,
+  "CA_ROTOR1_PZ": 0.3717,
+  "CA_ROTOR2_AX": 0,
+  "CA_ROTOR2_AY": 0,
+  "CA_ROTOR2_AZ": -1,
+  "CA_ROTOR2_CT": 5.164,
+  "CA_ROTOR2_KM": 0.152,
+  "CA_ROTOR2_PX": -0.2053,
+  "CA_ROTOR2_PY": -0.3785,
+  "CA_ROTOR2_PZ": 0.313,
+  "CA_ROTOR3_AX": 0,
+  "CA_ROTOR3_AY": 0,
+  "CA_ROTOR3_AZ": -1,
+  "CA_ROTOR3_CT": 5.164,
+  "CA_ROTOR3_KM": -0.1398,
+  "CA_ROTOR3_PX": -0.2116,
+  "CA_ROTOR3_PY": 0.3771,
+  "CA_ROTOR3_PZ": 0.313,
+  "CA_ROTOR4_AX": 0,
+  "CA_ROTOR4_AY": 0,
+  "CA_ROTOR4_AZ": -1,
+  "CA_ROTOR4_CT": 5.164,
+  "CA_ROTOR4_KM": 0.1526,
+  "CA_ROTOR4_PX": -0.2324,
+  "CA_ROTOR4_PY": -0.2392,
+  "CA_ROTOR4_PZ": 0.2543,
+  "CA_ROTOR5_AX": 0,
+  "CA_ROTOR5_AY": 0,
+  "CA_ROTOR5_AZ": -1,
+  "CA_ROTOR5_CT": 5.164,
+  "CA_ROTOR5_KM": -0.1404,
+  "CA_ROTOR5_PX": -0.2387,
+  "CA_ROTOR5_PY": 0.2379,
+  "CA_ROTOR5_PZ": 0.2543,
+  "CA_ROTOR6_AX": 0,
+  "CA_ROTOR6_AY": 0,
+  "CA_ROTOR6_AZ": -1,
+  "CA_ROTOR6_CT": 5.29,
+  "CA_ROTOR6_KM": 0.2261,
+  "CA_ROTOR6_PX": 0.4799,
+  "CA_ROTOR6_PY": -0.2139,
+  "CA_ROTOR6_PZ": -0.2382,
+  "CA_ROTOR7_AX": 0,
+  "CA_ROTOR7_AY": 0,
+  "CA_ROTOR7_AZ": -1,
+  "CA_ROTOR7_CT": 5.29,
+  "CA_ROTOR7_KM": -0.215,
+  "CA_ROTOR7_PX": 0.4873,
+  "CA_ROTOR7_PY": 0.207,
+  "CA_ROTOR7_PZ": -0.2382,
+  "CA_ROTOR8_AX": 0,
+  "CA_ROTOR8_AY": 0,
+  "CA_ROTOR8_AZ": -1,
+  "CA_ROTOR8_CT": 6.108,
+  "CA_ROTOR8_KM": 0.0055,
+  "CA_ROTOR8_PX": 0.59,
+  "CA_ROTOR8_PY": -0.0034,
+  "CA_ROTOR8_PZ": -0.2605,
+  "CA_ROTOR_COUNT": 9,
+  "EKF2_GPS_CTRL": 0,
+  "EKF2_HGT_REF": 2,
+  "EKF2_OF_CTRL": 1,
+  "EKF2_RNG_A_HMAX": 8,
+  "EKF2_RNG_CTRL": 2,
+  "MC_PITCHRATE_P": 0.9,
+  "MC_ROLLRATE_P": 0.6,
+  "MPC_MAN_TILT_MAX": 12,
+  "MPC_THR_HOVER": 0.592,
+  "SENS_BOARD_X_OFF": 0,
+  "SENS_BOARD_Y_OFF": 18,
+  "SENS_BOARD_Z_OFF": 0,
+  "SENS_FLOW_MAXHGT": 8,
+  "SENS_FLOW_ROT": 0,
+  "THR_MDL_FAC": 1,
+  "NLF_LAND_ANG": -20.0,
+  "MPC_LAND_SPEED": 0.5,
+  "MPC_TKO_SPEED": 1.5,
+  "MIS_TAKEOFF_ALT": 2.5,
+  "COM_DISARM_LAND": 2
+ },
+ "design": {
+  "v4": {
+   "config": {
+    "id": "asbuilt_cad",
+    "outer": 63,
+    "middle": 63,
+    "inner": 63,
+    "cg_dx": 0,
+    "cg_dz": 0
+   },
+   "draw": {
+    "hover_pitch": 20,
+    "park": -20,
+    "mass": 15.5,
+    "tmax_rear": 32,
+    "tmax_front": 32,
+    "foil_keep": 0.9,
+    "fan_scatter_1": 1,
+    "fan_scatter_2": 1,
+    "fan_scatter_3": 1,
+    "fan_scatter_4": 1,
+    "fan_scatter_5": 1,
+    "fan_scatter_6": 1,
+    "fan_scatter_7": 1,
+    "fan_scatter_8": 1,
+    "fan_scatter_9": 1,
+    "jet_err_fore_1": 0,
+    "jet_err_fore_2": 0,
+    "jet_err_fore_3": 0,
+    "jet_err_fore_4": 0,
+    "jet_err_fore_5": 0,
+    "jet_err_fore_6": 0,
+    "jet_err_side_1": 0,
+    "jet_err_side_2": 0,
+    "jet_err_side_3": 0,
+    "jet_err_side_4": 0,
+    "jet_err_side_5": 0,
+    "jet_err_side_6": 0,
+    "front_tilt_x_7": 0,
+    "front_tilt_y_7": 0,
+    "front_tilt_x_8": 0,
+    "front_tilt_y_8": 0,
+    "front_tilt_x_9": 0,
+    "front_tilt_y_9": 0,
+    "km": 0.006,
+    "battery_mass": 4.2,
+    "cg_err_x": 0,
+    "cg_err_y": 0,
+    "cg_err_z": 0,
+    "inertia_scale": 1,
+    "motor_tau": 0.055
+   },
+   "battery_pos": [
+    -0.145,
+    0,
+    -0.6
+   ],
+   "mirror_pairs": [
+    [
+     "M1",
+     "M2"
+    ],
+    [
+     "M3",
+     "M4"
+    ],
+    [
+     "M5",
+     "M6"
+    ],
+    [
+     "M7",
+     "M8"
+    ]
+   ],
+   "cant_deg": 30,
+   "card_rule": "vertical"
+  },
+  "sources": {
+   "frame": {
+    "value": "FRD m, origin = CAD origin",
+    "tag": "CAD"
+   },
+   "jet_theta_deg": {
+    "value": 63,
+    "tag": "CAD (rear-wing trailing-edge tangent, measured on the B-rep)",
+    "profile_le_te": [
+     54.22,
+     62.9
+    ]
+   },
+   "jet_cant_deg": {
+    "value": 30,
+    "tag": "CAD (rear section occurrence transform)"
+   },
+   "jet_exit_points": {
+    "value": {
+     "inner": [
+      -0.531,
+      -0.1055,
+      -0.282
+     ],
+     "middle": [
+      -0.531,
+      -0.214,
+      -0.2195
+     ],
+     "outer": [
+      -0.531,
+      -0.322,
+      -0.157
+     ]
+    },
+    "tag": "CAD (rear-wing bbox centre)"
+   },
+   "jetfoil_edf_points": {
+    "value": {
+     "inner": [
+      -0.34849,
+      -0.14988,
+      -0.3707
+     ],
+     "middle": [
+      -0.34849,
+      -0.25837,
+      -0.3081
+     ],
+     "outer": [
+      -0.34849,
+      -0.36678,
+      -0.2455
+     ]
+    },
+    "tag": "CAD (EDF body COM)"
+   },
+   "front_fans": {
+    "value": {
+     "M7": {
+      "mount": "EDF_L cradle bore",
+      "centre_cad": [
+       -6.412,
+       51.995,
+       -25.502
+      ],
+      "pos_frd": [
+       0.25502,
+       -0.06412,
+       -0.51995
+      ],
+      "axis_frd": [
+       0,
+       0.5,
+       -0.866
+      ]
+     },
+     "M8": {
+      "mount": "EDF_R cradle bore",
+      "centre_cad": [
+       6.412,
+       51.995,
+       -25.502
+      ],
+      "pos_frd": [
+       0.25502,
+       0.06412,
+       -0.51995
+      ],
+      "axis_frd": [
+       0,
+       -0.5,
+       -0.866
+      ]
+     },
+     "M9": {
+      "mount": "EDF_C cradle bore",
+      "centre_cad": [
+       0,
+       50.735,
+       -35.5
+      ],
+      "pos_frd": [
+       0.355,
+       0,
+       -0.50735
+      ],
+      "axis_frd": [
+       0,
+       0,
+       -1
+      ]
+     }
+    },
+    "tag": "CAD (front cradle bores)"
+   },
+   "batteries": {
+    "value": [
+     {
+      "name": "BATTERY_01__M700g:1",
+      "frd": [
+       -0.145,
+       0.083,
+       -0.58
+      ],
+      "box_frd": [
+       0.16,
+       0.05,
+       0.05
+      ]
+     },
+     {
+      "name": "BATTERY_02__M700g:1",
+      "frd": [
+       -0.145,
+       0.028,
+       -0.58
+      ],
+      "box_frd": [
+       0.16,
+       0.05,
+       0.05
+      ]
+     },
+     {
+      "name": "BATTERY_03__M700g:1",
+      "frd": [
+       -0.145,
+       -0.028,
+       -0.58
+      ],
+      "box_frd": [
+       0.16,
+       0.05,
+       0.05
+      ]
+     },
+     {
+      "name": "BATTERY_04__M700g:1",
+      "frd": [
+       -0.145,
+       -0.083,
+       -0.58
+      ],
+      "box_frd": [
+       0.16,
+       0.05,
+       0.05
+      ]
+     },
+     {
+      "name": "BATTERY_05__M700g:1",
+      "frd": [
+       -0.145,
+       0.028,
+       -0.64
+      ],
+      "box_frd": [
+       0.16,
+       0.05,
+       0.05
+      ]
+     },
+     {
+      "name": "BATTERY_06__M700g:1",
+      "frd": [
+       -0.145,
+       -0.028,
+       -0.64
+      ],
+      "box_frd": [
+       0.16,
+       0.05,
+       0.05
+      ]
+     }
+    ],
+    "tag": "CAD (6 x BATTERY_0n__M700g)"
+   },
+   "fixed_masses": {
+    "value": [
+     {
+      "name": "battery_1600mAh__M100g:1",
+      "kg": 0.1
+     },
+     {
+      "name": "XFLY 80mm EDF__M330g:1",
+      "kg": 0.33
+     },
+     {
+      "name": "XFLY 80mm EDF__M330g:1",
+      "kg": 0.33
+     },
+     {
+      "name": "XFLY 80mm EDF__M330g:1",
+      "kg": 0.33
+     },
+     {
+      "name": "ESC__M200g:1",
+      "kg": 0.2
+     },
+     {
+      "name": "ESC__M200g:2",
+      "kg": 0.2
+     },
+     {
+      "name": "ESC__M200g:3",
+      "kg": 0.2
+     },
+     {
+      "name": "PDB_XT90PW-F__M175g:1",
+      "kg": 0.175
+     },
+     {
+      "name": "PDB_XT90PW-F__M175g:2",
+      "kg": 0.175
+     },
+     {
+      "name": "ESC__M200g:4",
+      "kg": 0.2
+     },
+     {
+      "name": "ESC__M200g:5",
+      "kg": 0.2
+     },
+     {
+      "name": "BATTERY_01__M700g:1",
+      "kg": 0.7
+     },
+     {
+      "name": "BATTERY_02__M700g:1",
+      "kg": 0.7
+     },
+     {
+      "name": "BATTERY_03__M700g:1",
+      "kg": 0.7
+     },
+     {
+      "name": "BATTERY_04__M700g:1",
+      "kg": 0.7
+     },
+     {
+      "name": "BATTERY_05__M700g:1",
+      "kg": 0.7
+     },
+     {
+      "name": "BATTERY_06__M700g:1",
+      "kg": 0.7
+     },
+     {
+      "name": "ESC__M200g(Mirror):1",
+      "kg": 0.2
+     },
+     {
+      "name": "XFLY 80mm EDF__M330g(Mirror):1",
+      "kg": 0.33
+     },
+     {
+      "name": "XFLY 80mm EDF__M330g(Mirror):1",
+      "kg": 0.33
+     },
+     {
+      "name": "XFLY 80mm EDF__M330g(Mirror):1",
+      "kg": 0.33
+     },
+     {
+      "name": "ESC__M200g(Mirror) (1):1",
+      "kg": 0.2
+     },
+     {
+      "name": "ESC__M200g(Mirror) (1):2",
+      "kg": 0.2
+     },
+     {
+      "name": "PDB_XT90PW-F__M175g(Mirror):1",
+      "kg": 0.175
+     },
+     {
+      "name": "ESC__M200g(Mirror) (2):1",
+      "kg": 0.2
+     },
+     {
+      "name": "jetfoil inner L (no EDF)",
+      "kg": 0.5
+     },
+     {
+      "name": "jetfoil inner R (no EDF)",
+      "kg": 0.5
+     },
+     {
+      "name": "jetfoil middle L (no EDF)",
+      "kg": 0.5
+     },
+     {
+      "name": "jetfoil middle R (no EDF)",
+      "kg": 0.5
+     },
+     {
+      "name": "jetfoil outer L (no EDF)",
+      "kg": 0.5
+     },
+     {
+      "name": "jetfoil outer R (no EDF)",
+      "kg": 0.5
+     }
+    ],
+    "tag": "user (labels, jetfoil 0.500 kg)"
+   },
+   "total_mass_kg": {
+    "value": [
+     14,
+     17
+    ],
+    "tag": "user (drawn)"
+   },
+   "drawn_classes": {
+    "value": [
+     {
+      "name": "front cradle (incl. lock bolts)",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 867.86
+     },
+     {
+      "name": "long front foot",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 554.46
+     },
+     {
+      "name": "blue jetfoil frame L",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 219.88
+     },
+     {
+      "name": "blue jetfoil frame R",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 219.88
+     },
+     {
+      "name": "battery cradle + PDB tray + rails",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 314.04
+     },
+     {
+      "name": "wing clamps",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 134.21
+     },
+     {
+      "name": "HFlow insert + carrier",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 95.08
+     },
+     {
+      "name": "clamp caps",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 47.84
+     },
+     {
+      "name": "cradle roots",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 11.38
+     },
+     {
+      "name": "left outer foot (root Body1)",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 75.667
+     },
+     {
+      "name": "printed joints (meshes)",
+      "lo": 0.5,
+      "hi": 1,
+      "class": "petg",
+      "vol_cm3": 841.03
+     },
+     {
+      "name": "rods and hardware (mesh)",
+      "lo": 1,
+      "hi": 1.8,
+      "class": "kg",
+      "vol_cm3": null
+     },
+     {
+      "name": "PX4",
+      "lo": 0.04,
+      "hi": 0.11,
+      "class": "kg",
+      "vol_cm3": null
+     },
+     {
+      "name": "HFlow sensor",
+      "lo": 0.01,
+      "hi": 0.02,
+      "class": "kg",
+      "vol_cm3": null
+     },
+     {
+      "name": "wiring and screws",
+      "lo": 0.3,
+      "hi": 0.8,
+      "class": "kg",
+      "vol_cm3": null
+     },
+     {
+      "name": "front EDF M7",
+      "lo": 0.3,
+      "hi": 0.36,
+      "class": "kg",
+      "vol_cm3": null
+     },
+     {
+      "name": "front EDF M8",
+      "lo": 0.3,
+      "hi": 0.36,
+      "class": "kg",
+      "vol_cm3": null
+     },
+     {
+      "name": "front EDF M9",
+      "lo": 0.3,
+      "hi": 0.36,
+      "class": "kg",
+      "vol_cm3": null
+     }
+    ],
+    "tag": "user ranges, CAD centroids; scaled together to the drawn total"
+   },
+   "petg_density": {
+    "value": 1.27,
+    "tag": "user"
+   },
+   "stand_points": {
+    "value": {
+     "front": [
+      0,
+      39,
+      -57.3
+     ],
+     "rear_left": [
+      -59.5,
+      0,
+      39.5
+     ]
+    },
+    "tag": "CAD (long front foot, left outer foot); right foot mirrored (assumed, no right foot in the CAD)"
+   },
+   "other_unknowns": {
+    "value": "paired SITL draws 0-63 (fans, keep, km, tolerances, hover, park)",
+    "tag": "sweep (Amendments 1-16)"
+   }
+  },
+  "as_flown": {
+   "px4_card": {
+    "CA_AIRFRAME": 0,
+    "CA_ROTOR_COUNT": 9,
+    "CA_ROTOR0_PX": -0.1431,
+    "CA_ROTOR0_PY": -0.5186,
+    "CA_ROTOR0_PZ": 0.395,
+    "CA_ROTOR0_AX": 0,
+    "CA_ROTOR0_AY": 0,
+    "CA_ROTOR0_AZ": -1,
+    "CA_ROTOR0_KM": 0.176,
+    "CA_ROTOR0_CT": 5.15,
+    "CA_ROTOR1_PX": -0.1492,
+    "CA_ROTOR1_PY": 0.5251,
+    "CA_ROTOR1_PZ": 0.395,
+    "CA_ROTOR1_AX": 0,
+    "CA_ROTOR1_AY": 0,
+    "CA_ROTOR1_AZ": -1,
+    "CA_ROTOR1_KM": -0.1648,
+    "CA_ROTOR1_CT": 5.15,
+    "CA_ROTOR2_PX": -0.1753,
+    "CA_ROTOR2_PY": -0.3809,
+    "CA_ROTOR2_PZ": 0.3363,
+    "CA_ROTOR2_AX": 0,
+    "CA_ROTOR2_AY": 0,
+    "CA_ROTOR2_AZ": -1,
+    "CA_ROTOR2_KM": 0.1669,
+    "CA_ROTOR2_CT": 5.15,
+    "CA_ROTOR3_PX": -0.1814,
+    "CA_ROTOR3_PY": 0.3874,
+    "CA_ROTOR3_PZ": 0.3363,
+    "CA_ROTOR3_AX": 0,
+    "CA_ROTOR3_AY": 0,
+    "CA_ROTOR3_AZ": -1,
+    "CA_ROTOR3_KM": -0.1557,
+    "CA_ROTOR3_CT": 5.15,
+    "CA_ROTOR4_PX": -0.2076,
+    "CA_ROTOR4_PY": -0.2427,
+    "CA_ROTOR4_PZ": 0.2775,
+    "CA_ROTOR4_AX": 0,
+    "CA_ROTOR4_AY": 0,
+    "CA_ROTOR4_AZ": -1,
+    "CA_ROTOR4_KM": 0.1576,
+    "CA_ROTOR4_CT": 5.15,
+    "CA_ROTOR5_PX": -0.2136,
+    "CA_ROTOR5_PY": 0.2492,
+    "CA_ROTOR5_PZ": 0.2775,
+    "CA_ROTOR5_AX": 0,
+    "CA_ROTOR5_AY": 0,
+    "CA_ROTOR5_AZ": -1,
+    "CA_ROTOR5_KM": -0.1464,
+    "CA_ROTOR5_CT": 5.15,
+    "CA_ROTOR6_PX": 0.4699,
+    "CA_ROTOR6_PY": -0.1962,
+    "CA_ROTOR6_PZ": -0.2149,
+    "CA_ROTOR6_AX": 0,
+    "CA_ROTOR6_AY": 0,
+    "CA_ROTOR6_AZ": -1,
+    "CA_ROTOR6_KM": 0.2264,
+    "CA_ROTOR6_CT": 5.29,
+    "CA_ROTOR7_PX": 0.4772,
+    "CA_ROTOR7_PY": 0.1961,
+    "CA_ROTOR7_PZ": -0.2149,
+    "CA_ROTOR7_AX": 0,
+    "CA_ROTOR7_AY": 0,
+    "CA_ROTOR7_AZ": -1,
+    "CA_ROTOR7_KM": -0.2128,
+    "CA_ROTOR7_CT": 5.29,
+    "CA_ROTOR8_PX": 0.58,
+    "CA_ROTOR8_PY": 0,
+    "CA_ROTOR8_PZ": -0.2372,
+    "CA_ROTOR8_AX": 0,
+    "CA_ROTOR8_AY": 0,
+    "CA_ROTOR8_AZ": -1,
+    "CA_ROTOR8_KM": 0.0068,
+    "CA_ROTOR8_CT": 6.108,
+    "SENS_BOARD_Y_OFF": 20,
+    "PWM_MAIN_FUNC1": 101,
+    "PWM_MAIN_FUNC2": 102,
+    "PWM_MAIN_FUNC3": 103,
+    "PWM_MAIN_FUNC4": 104,
+    "PWM_MAIN_FUNC5": 105,
+    "PWM_MAIN_FUNC6": 106,
+    "PWM_MAIN_FUNC7": 107,
+    "PWM_MAIN_FUNC8": 108,
+    "PWM_MAIN_FUNC9": 109,
+    "PWM_MAIN_FUNC10": 0,
+    "PWM_MAIN_FUNC11": 0,
+    "PWM_MAIN_FUNC12": 0,
+    "PWM_MAIN_FUNC13": 0,
+    "PWM_MAIN_FUNC14": 0,
+    "PWM_MAIN_FUNC15": 0,
+    "PWM_MAIN_FUNC16": 0,
+    "MPC_THR_HOVER": 0.649,
+    "MC_ROLLRATE_P": 1.6706,
+    "MC_ROLLRATE_I": 2.2275,
+    "MC_ROLLRATE_D": 0.0334,
+    "MC_PITCHRATE_P": 1.8824,
+    "MC_PITCHRATE_I": 2.5099,
+    "MC_PITCHRATE_D": 0.0376,
+    "MC_YAWRATE_P": 0.7053,
+    "MC_YAWRATE_I": 0.3527,
+    "MC_YAWRATE_D": 0,
+    "MC_ROLL_P": 2,
+    "MC_PITCH_P": 2,
+    "MC_YAW_P": 1,
+    "THR_MDL_FAC": 1,
+    "MC_ACRO_R_MAX": 720,
+    "MC_ACRO_P_MAX": 720,
+    "MC_ACRO_Y_MAX": 540,
+    "MC_ACRO_EXPO": 0,
+    "MC_ACRO_EXPO_Y": 0,
+    "MC_ACRO_SUPEXPO": 0,
+    "MC_ACRO_SUPEXPOY": 0,
+    "MC_AIRMODE": 1
+   }
+  },
+  "pixhawk_position": [
+   0.0154,
+   0,
+   -0.5708
+  ],
+  "pixhawk_rotation": [
+   0,
+   0,
+   0
+  ],
+  "flow_sensor": {
+   "enabled": true,
+   "rate": 50,
+   "flow_noise": 0.02,
+   "range_noise": 0.01,
+   "range_min": 0.08,
+   "range_max": 8,
+   "fov_deg": 42,
+   "note": "SMALL_SCALE_V4.2 v8: 'HFlow sensor - follows HFlowAngle' in the interchangeable angle insert (HFlowAngle = 20 deg), just behind and below the PX4",
+   "position": [
+    0.003,
+    0,
+    -0.5217
+   ],
+   "rotation": [
+    0,
+    -20,
+    0
+   ],
+   "range_m": 8
+  },
+  "indoor": true,
+  "missions": [
+   {
+    "name": "First flight",
+    "max_time": 180,
+    "steps": [
+     {
+      "kind": "takeoff",
+      "alt": 2
+     },
+     {
+      "kind": "hover",
+      "s": 15
+     },
+     {
+      "kind": "land"
+     }
+    ]
+   }
+  ]
+ },
+ "notes": "Generated by scripts/v4_airframe.py (V4 clean sheet) from SMALL_SCALE_V4.2 (Fusion guide, left side mirrored).\n[2026-10-22] V4 as-built (sweep feat/v4-authority-sweep, atlas_v4_asbuilt.json) with the weighed 3-battery mass, CG and inertia of the live CAD (SMALL_SCALE_V4.2 v8, card_exact3s_live_20.json) and its 67.5 deg jet axes; the fork's jet turning loss folded into max_thrust.\n[2026-10-22] 3D model: every visible body of SMALL_SCALE_V4.2 v8 (126 solids + 45 meshes, incl. the hardware/rods mesh, jetfoil shells, joints, PX4), heavy meshes thinned on a 1.5 mm grid. Masses: the 22 __M<g>g labels as 40 items at their solids (from the STEP), plus the unlabelled remainder of the weighed set exact3s."
+}

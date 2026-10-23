@@ -233,6 +233,31 @@ parameters:
       default: 0
     NLF_W9:
       description:
-        short: Yaw-balanced motor 9 thrust weight
+        short: Yaw-balanced thrust weight of front fan A
+        long: Exported from the model. Front fan A (NLF_FA) gets this share of the nose effort and fan B (NLF_FB) gets 2 minus it, so the pair makes no yaw. The name is from the ten-motor layout, where A is motor 9.
       type: float
       default: 1
+    NLF_FA:
+      description:
+        short: Front fan A, motor number
+        long: Exported from the model. One of the two front fans that make opposite yaw; the pair also steers the heading on the ground.
+      type: int32
+      default: 9
+    NLF_FB:
+      description:
+        short: Front fan B, motor number
+        long: Exported from the model. The other fan of the yaw pair.
+      type: int32
+      default: 10
+    NLF_FC:
+      description:
+        short: Third front fan, motor number (0 = none)
+        long: Exported from the model. A front fan outside the yaw pair (V4's nose fan). It takes NLF_WC of the nose effort and no part in the heading.
+      type: int32
+      default: 0
+    NLF_WC:
+      description:
+        short: Thrust weight of the third front fan
+        long: Exported from the model. 0 when there is no third front fan.
+      type: float
+      default: 0

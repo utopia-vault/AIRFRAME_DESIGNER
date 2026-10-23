@@ -1,0 +1,1 @@
+{"label": "10kg_park-20_hover18", "armed_samples": 807, "still_armed": true, "mode": "Takeoff", "h_start": 0.34, "h_max": 0.34, "h_end": 0.34, "pitch_start": -20.0, "pitch_end": -19.8, "roll_absmax": 0.0, "thrust_max": 44.0, "cmd_end": [0.16, 0.15, 0.12, 0.12, 0.0, 0.09, 0.53, 0.55, 0.62], "liftoff_s": null}

@@ -70,6 +70,32 @@ def board_target_from_description(desc: str | None) -> str | None:
     return f"px4_fmu-v{m.group(1)}{m.group(2).lower()}"
 
 
+def boot_from_loader(device: str) -> bool:
+    """Tell a PX4 bootloader to start the firmware: GET_SYNC, then REBOOT (PX4's bootloader protocol, the same two
+    commands px_uploader sends at the end of a flash). True when the loader answered in sync."""
+    import serial
+    insync = False
+    try:
+        s = serial.Serial(device, 115200, timeout=0.5)
+    except Exception:
+        return False
+    try:
+        s.reset_input_buffer()
+        s.write(bytes([0x21, 0x20]))                  # GET_SYNC, EOC
+        time.sleep(0.2)
+        insync = s.read(2) == bytes([0x12, 0x10])     # INSYNC, OK
+        s.write(bytes([0x30, 0x20]))                  # REBOOT, EOC
+        s.flush()
+    except Exception:
+        pass                                          # the port going away is the loader doing as it was told
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+    return insync
+
+
 class FirmwareJob:
     """Runs scripts/build_hitl_firmware.sh in the background, streaming output into the app log."""
 
@@ -1176,8 +1202,42 @@ class ConnectionManager:
             t0 = time.time()
             while time.time() - t0 < 20 and time.time() - link.ctl_rx_time < 1.5:
                 time.sleep(0.5)                       # wait for the board to actually go away
-            self._post_boot_ekf_restart(link, None)
+            self._post_boot_ekf_restart(self.link if self._rescue_loader() else link, None)
         threading.Thread(target=run, daemon=True).start()
+
+    def _rescue_loader(self, patience: float = 8.0, timeout: float = 30.0) -> bool:
+        """After a reboot we asked for: a board that comes back in its bootloader and stays there is told to start.
+
+        The loader waits a few seconds on USB, and a sync command turning up in the MAVLink the link sends it
+        keeps it there for good: USB says "PX4 BL ...", the link comes up as system 0 and nothing ever answers,
+        so Arm and Takeoff stay grey with "waiting for PX4's arming check report". Only after our own reboot
+        may we tell it to start the firmware (REBOOT, the command px_uploader ends every flash with); a loader
+        we did not put there may be in the middle of someone else's flash. True when the board was rescued."""
+        t0, since = time.time(), None
+        while time.time() - t0 < timeout:
+            b = self.detected_board()
+            if b["bootloader"]:
+                since = since or time.time()
+                if time.time() - since >= patience:
+                    break
+            elif since is not None and b["device"]:
+                return False                          # it left the loader by itself
+            time.sleep(0.5)
+        else:
+            return False
+        device, baud = b["device"], self.baud
+        self.log(f"[link] the board stayed in its bootloader after the reboot ({b['description']}); telling it to start the firmware")
+        with self._lock:
+            self._close_link()                        # our traffic is what holds it there
+        boot_from_loader(device)
+        for _ in range(20):
+            time.sleep(0.5)
+            b = self.detected_board()
+            if b["device"] and not b["bootloader"]:
+                break
+        time.sleep(1.0)
+        self.connect_hitl(b["device"] or device, baud)
+        return True
 
     # ------------------------------------------------------------ status
     def status(self) -> dict:

@@ -574,3 +574,29 @@ def test_the_sitl_reference_never_writes_over_the_designs_own_parameters():
     conn.export_params_fn = lambda: {"NLF_LAND_ANG": -10.0}
     d = conn.sitl_diff()
     assert [x["name"] for x in d["differ"]] == ["MPC_XY_P"], "only what the design leaves unsaid comes from SITL"
+
+
+def test_a_board_left_in_its_bootloader_after_our_reboot_is_started_again(monkeypatch):
+    """After Reset reboots a HITL board it can come back as 'PX4 BL ...' and stay there, held by our own MAVLink:
+    the app then tells the loader to start the firmware and reconnects. A loader that leaves by itself is left alone."""
+    import airframe_designer.px4.connection as cm
+    monkeypatch.setattr(cm.time, "sleep", lambda s: None)
+    clock = iter(range(0, 10_000))
+    monkeypatch.setattr(cm.time, "time", lambda: float(next(clock)))
+    conn = cm.ConnectionManager.__new__(cm.ConnectionManager)
+    conn._lock, conn.baud, conn.log = __import__("threading").RLock(), 921600, lambda m: None
+    loader = {"device": "/dev/x", "bootloader": True, "description": "PX4 BL FMU v6X.x"}
+    firmware = {"device": "/dev/x", "bootloader": False, "description": "PX4 FMU v6X.x"}
+    boards = iter([loader] * 12 + [firmware] * 5)
+    conn.detected_board = lambda: next(boards)
+    calls = []
+    conn._close_link = lambda: calls.append("close")
+    conn.connect_hitl = lambda dev, baud: calls.append(("connect", dev, baud))
+    monkeypatch.setattr(cm, "boot_from_loader", lambda dev: calls.append(("boot", dev)) or True)
+    assert conn._rescue_loader(patience=8.0, timeout=30.0)
+    assert calls == ["close", ("boot", "/dev/x"), ("connect", "/dev/x", 921600)]
+
+    calls.clear()
+    boards = iter([loader] * 3 + [firmware] * 3)          # out of the loader on its own: nothing is sent
+    conn.detected_board = lambda: next(boards)
+    assert not conn._rescue_loader(patience=8.0, timeout=30.0) and calls == []

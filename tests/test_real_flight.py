@@ -600,3 +600,23 @@ def test_a_board_left_in_its_bootloader_after_our_reboot_is_started_again(monkey
     boards = iter([loader] * 3 + [firmware] * 3)          # out of the loader on its own: nothing is sent
     conn.detected_board = lambda: next(boards)
     assert not conn._rescue_loader(patience=8.0, timeout=30.0) and calls == []
+
+
+def test_logs_are_never_listed_or_downloaded_while_armed():
+    """Answering LOG_REQUEST_LIST walks the whole card; in HITL that stalled PX4's MAVLink long enough for the
+    simulated sensors to stop arriving, and a hovering board failed over to termination."""
+    import asyncio, threading
+    from airframe_designer.server.app import build_app
+    af = Airframe.from_dict({"rotors": [{"name": f"M{i}"} for i in range(1, 5)]})
+    sent = Mock()
+    link = SimpleNamespace(mode="hitl", ctl_connected=True, armed=True, params={}, param_count=0,
+                           status=lambda: {"armed": True}, send_log_request_list=sent, link_budget_bps=lambda: None)
+    conn = SimpleNamespace(mode="hitl")
+    sim = SimpleNamespace(lock=threading.RLock(), hooks=[], t=0.0, paused=False, airframe=af,
+                          reset=Mock(), recorder=SimpleNamespace(sample_hz=20.0))
+    state = SimpleNamespace(simulator=sim, conn=conn, link=link, log=Mock(), export_log=[])
+    routes = {r.path: r.endpoint for r in build_app(state).routes if hasattr(r, "endpoint")}
+    r = asyncio.run(routes["/api/logs"](refresh=1))
+    assert r.status_code == 409 and b"armed" in r.body and not sent.called, "nothing is asked of a flying board"
+    r = asyncio.run(routes["/api/logs/download"]({"id": 1}))
+    assert r.status_code == 409

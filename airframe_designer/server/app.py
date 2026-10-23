@@ -1782,6 +1782,11 @@ target_link_libraries(external__{name} PRIVATE px4_work_queue)
         from ..px4.logs import list_logs
         if not link.ctl_connected:
             return JSONResponse({"ok": False, "error": "no link to the aircraft"}, status_code=409)
+        if link.armed:
+            # Answering LOG_REQUEST_LIST makes PX4 walk its whole card (hundreds of logs) and its MAVLink handling
+            # stalls meanwhile: in HITL the simulated sensors stop getting through and the board fails over to
+            # termination, on a radio the telemetry goes dark. Logs are for the ground.
+            return JSONResponse({"ok": False, "error": "the aircraft is armed: logs are listed and downloaded on the ground"}, status_code=409)
         # Listing 384 logs is 17 kB down the radio: asked for, not done on a timer behind your back.
         if refresh or not log_job["entries"]:
             entries = await run_in_threadpool(list_logs, state.link)
@@ -1832,6 +1837,8 @@ target_link_libraries(external__{name} PRIVATE px4_work_queue)
         from ..px4.logs import LogEntry, Download, download_log
         if not link.ctl_connected:
             return JSONResponse({"ok": False, "error": "no link to the aircraft"}, status_code=409)
+        if link.armed:
+            return JSONResponse({"ok": False, "error": "the aircraft is armed: logs are listed and downloaded on the ground"}, status_code=409)
         if log_job["thread"] is not None and log_job["thread"].is_alive():
             return JSONResponse({"ok": False, "error": "a log is already coming down"}, status_code=409)
         want = int(body.get("id", -1))

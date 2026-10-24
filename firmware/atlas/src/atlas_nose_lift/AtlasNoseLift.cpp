@@ -33,6 +33,7 @@
 #include <uORB/topics/vehicle_command_ack.h>
 #include <uORB/topics/rc_channels.h>
 #include <uORB/topics/actuator_armed.h>
+#include <uORB/topics/estimator_aid_source1d.h>
 #include <systemlib/mavlink_log.h>
 using namespace time_literals;
 // Separate stack for the sequencer: manual and automatic controller frames must
@@ -112,6 +113,25 @@ private:
   control[_ground.fa-1]=a; control[_ground.fb-1]=b; if (_ground.fc) { control[_ground.fc-1]=c; }
  }
  bool is_front(int i) const { return i==_ground.fa-1 || i==_ground.fb-1 || (_ground.fc && i==_ground.fc-1); }
+ // After a boot PX4 ignores its range finder until the reading has moved 10 cm (a hard-coded stuck check) and fuses
+ // a stand-in EKF2_MIN_RNG meanwhile. Lifting the nose on that let the height estimate drift on the stand (0.8 m in
+ // HITL, board log 445): the land detector flipped to "in air", the handover started from a wrong height and the
+ // climb overshot and sagged. So the sequence arms only once PX4 fuses a real reading. A design without a range
+ // finder (EKF2_RNG_CTRL 0) has nothing to wait for.
+ uORB::Subscription _rng_aid_sub{ORB_ID(estimator_aid_src_rng_hgt)};
+ bool _rng_wait_announced{false}, _rng_latched{false};
+ hrt_abstime _rng_ok_since{0};
+ // In use = PX4 fused a real reading (not the stand-in) within the last half second. Its per-sample fused flag
+ // flickers while it takes the range finder back, so the sequence asks for a second of it before it goes on.
+ bool range_in_use(hrt_abstime now) {
+  int32_t ctrl{0}; param_get(param_find("EKF2_RNG_CTRL"), &ctrl);
+  if (ctrl == 0) { return true; }
+  float min_rng{0.1f}; param_get(param_find("EKF2_MIN_RNG"), &min_rng);
+  estimator_aid_source1d_s a{};
+  if (!_rng_aid_sub.copy(&a) || !a.timestamp || now < a.timestamp || now - a.timestamp > 500_ms) { return false; }
+  return a.time_last_fuse && now >= a.time_last_fuse && now - a.time_last_fuse < 500_ms
+      && !a.innovation_rejected && a.observation > min_rng + 0.05f;
+ }
  // Thrust input for PX4's land detector while the module drives the motors directly (not a landed flag): 0.16 per unit of
  // nose effort, which is 0.08 (t9 + t10) on the ten-motor layout. The aircraft is on its feet in every phase that
  // publishes it, so it stays below the detector's maybe-landed threshold (MPC_MANTHR_MIN + 0.01 outside climb-rate
@@ -429,7 +449,7 @@ private:
    _pilot_handover=want_pilot; _pilot_nav=_pilot.get()==2 ? vehicle_status_s::NAVIGATION_STATE_ALTCTL : vehicle_status_s::NAVIGATION_STATE_STAB;
    _landing=false; _handover_requested=false; _takeover_request=false; _was_high=false; _lift=0.f; _liftoff_since=0; _takeover_since=0; _stick_lost_since=0; _contact_dwell=0;
    _pilot_mode=!want_pilot && _rc_throttle.get()!=0; _pilot_gate.reset(); _pilot_cap=0.f; _pilot_ground_abort=false; _ready_announced=false; _flight_alt=_pilot_mode ? 1.f : _alt.get();
-   _phase=Prime; _start=now; _phase_start=now; _dwell=0; _fade_start=0; _integral=0.f; _cmd9=0.f; _cmd10=0.f; _cmdc=0.f; _last_command=0; _was_armed=false;
+   _phase=Prime; _start=now; _phase_start=now; _dwell=0; _fade_start=0; _integral=0.f; _cmd9=0.f; _cmd10=0.f; _cmdc=0.f; _last_command=0; _was_armed=false; _rng_wait_announced=false; _rng_latched=false; _rng_ok_since=0;
    _rest_pitch=math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
    _landing_angle=_land_angle_param.get();
    if (_landing_angle > _rest_pitch+3.f) {
@@ -609,6 +629,21 @@ private:
    return;
   }
   if (_phase==Prime) {
+   if (!armed && !_rng_latched) {
+    // Nothing is armed and PX4's mode is not touched while this waits; the arming clock starts when it ends.
+    if (range_in_use(now)) { if (!_rng_ok_since) { _rng_ok_since=now; } } else { _rng_ok_since=0; }
+    if (_rng_ok_since && now-_rng_ok_since>=1_s) {
+     _rng_latched=true;
+     if (_rng_wait_announced) { NL_INFO("range finder in use; priming"); }
+    } else {
+     if (!_rng_wait_announced && now-_phase_start>1500_ms) { NL_WARN("waiting for PX4 to use the range finder before lifting the nose"); _rng_wait_announced=true; }
+     if (now-_phase_start>20_s) {
+      NL_ERR("PX4 is still not using the range finder (after a boot it waits for the reading to move 10 cm): lift the nose about 10 cm by hand, then press Takeoff again");
+      _phase=Idle; return;
+     }
+     _start=now; return;
+    }
+   }
    if (now-_start>15_s) { fail("arming timeout",status,false); return; }
    if (now-_start>2_s && now-_last_command>1_s) {
     if (status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {

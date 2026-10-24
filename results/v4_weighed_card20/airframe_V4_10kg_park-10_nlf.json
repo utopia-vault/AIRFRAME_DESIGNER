@@ -1182,7 +1182,8 @@
     "MPC_LAND_SPEED": 0.5,
     "MPC_TKO_SPEED": 1.5,
     "MIS_TAKEOFF_ALT": 2.5,
-    "NLF_ENABLE": 1
+    "NLF_ENABLE": 1,
+    "NLF_ALT": 1.7
   },
   "design": {
     "v4": {

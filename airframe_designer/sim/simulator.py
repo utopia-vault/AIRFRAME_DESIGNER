@@ -23,6 +23,39 @@ from .recorder import Recorder, output_fraction
 from .wind import WindModel
 
 
+class LoopTiming:
+    """How evenly the sensor steps actually leave, on the wall clock. A HITL board runs on its own clock and treats
+    a sensor that stops for a tenth of a second as failed, so a stall anywhere in the app shows up here first:
+    the worst gap, and how many steps came more than 20 ms after the one before, over the last ten seconds."""
+
+    LATE_S = 0.020
+
+    def __init__(self, window: int = 2500):
+        from collections import deque
+        self.gaps: "deque[float]" = deque(maxlen=window)
+        self.last: float | None = None
+        self.late_total = 0
+
+    def mark(self, now: float) -> None:
+        if self.last is not None:
+            gap = now - self.last
+            self.gaps.append(gap)
+            if gap > self.LATE_S:
+                self.late_total += 1
+        self.last = now
+
+    def pause(self) -> None:
+        """Idle or paused: the next step is not late, it is the first one."""
+        self.last = None
+
+    def summary(self) -> dict:
+        g = sorted(self.gaps)
+        if not g:
+            return {"steps": 0, "max_ms": 0.0, "p99_ms": 0.0, "late": 0, "late_total": self.late_total}
+        return {"steps": len(g), "max_ms": round(g[-1] * 1000, 1), "p99_ms": round(g[int(0.99 * (len(g) - 1))] * 1000, 1),
+                "late": sum(1 for x in g if x > self.LATE_S), "late_total": self.late_total}
+
+
 class Simulator:
     def __init__(self, airframe: Airframe, link=None, sensor_rate: float = 250.0, physics_substeps: int = 4,
                  gps_rate: float = 10.0, speed: float = 1.0, lockstep: bool | None = None,
@@ -69,6 +102,7 @@ class Simulator:
         self._sim_start = 0
         self._last_hb = 0.0
         self._rtf_t0, self._rtf_sim0 = time.perf_counter(), 0
+        self.timing = LoopTiming()
 
     # ------------------------------------------------------------ the physics engine
     # There is one, JSBSim, and it is not selectable. An engine you can switch is an engine you have to ask
@@ -223,10 +257,26 @@ class Simulator:
             return 100.0
         return max(0.0, min(100.0, 100.0 * (cap - self.energy_wh) / cap))
 
+    PHYSICS_KEYS = ("mass", "body", "rotors", "wings", "legs", "hover_pitch_deg", "landed_pitch_deg", "cad")
+
+    @classmethod
+    def physics_key(cls, airframe: Airframe) -> str:
+        """What JSBSim's model is built from. Everything else in a design - PX4 overrides, sequences, the name, the
+        sensor mounts - is read live from the airframe the body holds."""
+        import json
+        d = airframe.to_dict()
+        return json.dumps({k: d.get(k) for k in cls.PHYSICS_KEYS}, sort_keys=True, default=str)
+
     def set_airframe(self, airframe: Airframe) -> None:
-        """Load an edited airframe. JSBSim rebuilds its model, so the vehicle restarts on the ground."""
+        """Load an edited airframe. A change to the aircraft itself rebuilds JSBSim's model and the vehicle restarts
+        on the ground; anything else is swapped in where it stands. Rebuilding on every save reset a hovering aircraft
+        onto its legs and stalled the loop each time a gain was typed."""
+        same = self.physics_key(airframe) == self.physics_key(self.airframe)
         with self.lock:
             self.airframe = airframe
+            if same and hasattr(self.sim, "af"):
+                self.sim.af = airframe
+                return
             self.sim = self._make_body(airframe)
             self.sim.reset()
 
@@ -261,6 +311,7 @@ class Simulator:
         time.sleep(0.02)
         self._wall_start = time.perf_counter()
         self._sim_start = self.time_usec
+        self.timing.pause()
 
     def step_once(self) -> bool:
         """One sensor step: actuators -> physics -> hooks -> sensors -> PX4 (-> lockstep wait -> pacing).
@@ -350,6 +401,7 @@ class Simulator:
                 link.send_hil_optical_flow(flow)
                 link.send_distance_sensor(dist)
             link.send_hil_sensor(sensor)
+            self.timing.mark(time.perf_counter())
         except Exception as e:
             if time.time() - self._last_send_err > 3.0:
                 self.log(f"[sim] send failed: {e}")

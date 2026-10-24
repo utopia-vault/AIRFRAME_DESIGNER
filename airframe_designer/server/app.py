@@ -165,6 +165,19 @@ def build_app(state: AppState) -> FastAPI:
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     # ------------------------------------------------------------- status
+    def airframe_rev() -> str:
+        """A fingerprint of what the page edits and the server can also change behind it (overrides written by
+        Update PX4 or the Parameters table, the park pitch, legs, rotors, design settings). The page reloads the
+        design when it moves, so its next save cannot quietly write an old copy back over the server's."""
+        import hashlib
+        af = sim.airframe
+        try:
+            blob = json.dumps([id(af), af.name, af.px4_overrides, af.design, af.landed_pitch_deg, af.hover_pitch_deg,
+                               [r.to_dict() for r in af.rotors], [l.to_dict() for l in af.legs]], sort_keys=True, default=str)
+        except Exception:
+            return str(id(af))
+        return hashlib.sha1(blob.encode()).hexdigest()[:12]
+
     def status_dict() -> dict:
         s = link.status()
         s["mode_name"] = mode_name(s["custom_mode"])
@@ -216,6 +229,8 @@ def build_app(state: AppState) -> FastAPI:
         s["speed"] = sim.speed
         s["sensor_rate"] = sim.sensor_rate
         s["lockstep"] = sim.lockstep
+        s["loop_timing"] = sim.timing.summary() if hasattr(sim, "timing") else {}
+        s["airframe_rev"] = airframe_rev()
         s["noise"] = sim.sensors.noise.enabled
         s["paused"] = sim.paused
         return s
@@ -289,7 +304,8 @@ def build_app(state: AppState) -> FastAPI:
         sim.set_airframe(af)
         autosave(af)
         hc = af.hover_check()
-        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc})
+        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc,
+                          "rev": airframe_rev()})
 
     @app.get("/api/airframe/hover_check")
     async def hover_check():
@@ -325,7 +341,8 @@ def build_app(state: AppState) -> FastAPI:
         sim.set_airframe(af)
         autosave(af)
         hc = af.hover_check()
-        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc})
+        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc,
+                          "rev": airframe_rev()})
 
     @app.post("/api/airframe/load")
     async def load_airframe(body: dict):
@@ -344,7 +361,8 @@ def build_app(state: AppState) -> FastAPI:
         cancel_live("airframe changed")
         sim.set_airframe(af)
         hc = af.hover_check()
-        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc})
+        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc,
+                          "rev": airframe_rev()})
 
     @app.post("/api/airframe/save")
     async def save_airframe(body: dict):
@@ -373,7 +391,8 @@ def build_app(state: AppState) -> FastAPI:
         autosave(af)
         hc = af.hover_check()
         state.log(f"[preset] new design {name}")
-        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc})
+        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc,
+                          "rev": airframe_rev()})
 
     @app.post("/api/airframe/delete")
     async def delete_airframe(body: dict):
@@ -427,7 +446,8 @@ def build_app(state: AppState) -> FastAPI:
         autosave(af)
         hc = af.hover_check()
         state.log(f"[preset] duplicated as {preset_path(af).name}")
-        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc})
+        return json_safe({"ok": True, "airframe": af.to_dict(), "problems": af.validate() + hc["problems"], "hover": hc,
+                          "rev": airframe_rev()})
 
     # ------------------------------------------------------------------ CAD (STEP bodies -> masses, CG)
     CAD_DIR = AIRFRAME_DIR / "cad"
@@ -1750,6 +1770,8 @@ target_link_libraries(external__{name} PRIVATE px4_work_queue)
 
     # ------------------------------------------------------------------ flight recorder: saved runs
     RUNS = RunStore(PROJECT_DIR / "results" / "runs")
+    # read every run's summary once, now, before anything flies (the list is instant after that)
+    threading.Thread(target=lambda: RUNS.list(), name="runs-index", daemon=True).start()
 
     def save_current_run(name: str = "", note: str = "") -> dict:
         """Keep the run that just happened, with the design and the parameters that produced it."""
@@ -1898,13 +1920,19 @@ target_link_libraries(external__{name} PRIVATE px4_work_queue)
                                                    "duration": round(sim.recorder.duration, 2)}}
 
     @app.get("/api/runs/current")
-    async def runs_current(since: int = 0):
+    async def runs_current(since: int = 0, limit: int = 0):
         """The run in progress, straight from the recorder, so the graph shows the whole flight and not
-        only the part that happened while this page was open. Incremental: ask for the rows after `since`."""
+        only the part that happened while this page was open. Incremental: ask for the rows after `since`.
+
+        `limit` caps the rows in one answer (0 = all of them). Turning a long recording into JSON holds the
+        interpreter for as long as it takes - 100 ms for five minutes of flight, seconds for forty - and the
+        simulation loop cannot step meanwhile, which a HITL board reads as its sensors failing. The page asks in
+        slices; `more` says there is another one."""
         rows = sim.recorder.rows
         since = max(0, min(int(since), len(rows)))
-        return {"columns": list(sim.recorder.columns), "rows": rows[since:], "total": len(rows), "since": since,
-                "duration": round(sim.recorder.duration, 2), "flew": sim.recorder.flew}
+        end = len(rows) if int(limit) <= 0 else min(len(rows), since + int(limit))
+        return {"columns": list(sim.recorder.columns), "rows": rows[since:end], "total": len(rows), "since": since,
+                "more": end < len(rows), "duration": round(sim.recorder.duration, 2), "flew": sim.recorder.flew}
 
     @app.get("/api/runs/{run_id}")
     async def runs_get(run_id: str):

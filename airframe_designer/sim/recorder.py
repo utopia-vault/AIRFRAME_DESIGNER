@@ -209,11 +209,72 @@ class Recorder:
                 "samples": len(self.rows), "sample_hz": self.sample_hz}
 
 
+def dump_run(path: Path, doc: dict, chunk: int = 500) -> None:
+    """Write a run as JSON a slice of rows at a time, the same bytes json.dumps(doc) would give.
+
+    One json.dumps of a long recording is a single C call that holds the interpreter until it is done - most of a
+    second for forty minutes of flight - and the simulation loop cannot step meanwhile, which a HITL board reads as
+    its sensors failing. Between slices the loop gets the interpreter back. Written to a temporary file and moved
+    into place, so a run file is never half written."""
+    rows = doc.get("rows") or []
+    head = {k: v for k, v in doc.items() if k != "rows"}
+    tmp = path.with_name(path.name + ".part")
+    with open(tmp, "w") as f:
+        h = json.dumps(head, separators=(",", ":"))
+        f.write(h[:-1] + ("," if head else "") + '"rows":[')
+        for i in range(0, len(rows), chunk):
+            part = json.dumps(rows[i:i + chunk], separators=(",", ":"))[1:-1]
+            if part:
+                f.write(("," if i else "") + part)
+            time.sleep(0)                      # hand the interpreter back to the simulation
+        f.write("]}")
+    tmp.replace(path)
+
+
 class RunStore:
     """Saved runs on disk: results/runs/<id>.json, newest first."""
 
     def __init__(self, root: Path):
         self.root = Path(root)
+        self._index: dict[str, list] = {}         # file name -> [mtime, size, entry]
+        self._index_loaded = False
+
+    # Listing runs used to parse every one of them in full - a hundred megabytes of JSON, each file a single C call
+    # that holds the interpreter - whenever the graph opened, after every save and on every design reload. The
+    # summary of a run is kept here instead, keyed by the file's size and time, in memory and in index.cache next to
+    # the runs, so each run is read once ever.
+    INDEX_FILE = "index.cache"
+
+    def _load_index(self) -> None:
+        if self._index_loaded:
+            return
+        self._index_loaded = True
+        try:
+            self._index = json.loads((self._dir() / self.INDEX_FILE).read_text())
+        except Exception:
+            self._index = {}
+
+    def _store_index(self) -> None:
+        try:
+            tmp = self._dir() / (self.INDEX_FILE + ".part")
+            tmp.write_text(json.dumps(self._index))
+            tmp.replace(self._dir() / self.INDEX_FILE)
+        except Exception:
+            pass
+
+    def _cached_entry(self, f: Path) -> dict | None:
+        st = f.stat()
+        hit = self._index.get(f.name)
+        if hit and hit[0] == st.st_mtime and hit[1] == st.st_size:
+            return hit[2]
+        try:
+            entry = self._entry(json.loads(f.read_text()))
+        except Exception:
+            return None
+        time.sleep(0)                              # one file at a time: the simulation gets the interpreter back
+        self._index[f.name] = [st.st_mtime, st.st_size, entry]
+        self._dirty = True
+        return entry
 
     def _dir(self) -> Path:
         self.root.mkdir(parents=True, exist_ok=True)
@@ -251,7 +312,7 @@ class RunStore:
             "log": list(log or []),      # what the flight controller said while this run was flying
             **recorder.as_dict(),
         }
-        path.write_text(json.dumps(doc, separators=(",", ":")))
+        dump_run(path, doc)
         recorder.saved_at = len(recorder.rows)
         return {"ok": True, **self._entry(doc)}
 
@@ -265,7 +326,7 @@ class RunStore:
         if path is None:
             return {"ok": False, "error": "bad run id"}
         doc = {**doc, "id": path.stem}
-        path.write_text(json.dumps(doc, separators=(",", ":")))
+        dump_run(path, doc)
         return {"ok": True, **self._entry(doc)}
 
     @staticmethod
@@ -276,12 +337,16 @@ class RunStore:
                 "airframe_name": (doc.get("airframe") or {}).get("name", "")}
 
     def list(self) -> list[dict]:
-        out = []
-        for f in sorted(self._dir().glob("*.json"), reverse=True):
-            try:
-                out.append(self._entry(json.loads(f.read_text())))
-            except Exception:
-                continue
+        self._load_index()
+        self._dirty = False
+        files = sorted(self._dir().glob("*.json"), reverse=True)
+        out = [e for e in (self._cached_entry(f) for f in files) if e is not None]
+        names = {f.name for f in files}
+        stale = [k for k in self._index if k not in names]
+        for k in stale:
+            del self._index[k]
+        if stale or self._dirty:
+            self._store_index()
         return out
 
     def get(self, run_id: str) -> dict | None:
@@ -299,7 +364,7 @@ class RunStore:
         if doc is None or p is None:
             return False
         doc["name"] = str(name)[:80]
-        p.write_text(json.dumps(doc, separators=(",", ":")))
+        dump_run(p, doc)
         return True
 
     def delete(self, run_id: str) -> bool:

@@ -14,3 +14,7 @@ __pycache__/
 airframes/_autosave.json
 *.egg-info/
 airframes/cad/*.bodies.json
+
+# the run list's summary cache (sim/recorder.py RunStore), rebuilt from the runs themselves
+results/runs/index.cache
+results/runs/*.part

@@ -29,6 +29,23 @@ let status = {};
 let params = {};
 let meta = {};
 let pushTimer = null;
+// The design as the server last had it. The page keeps its own copy and sends all of it on every edit, so a change
+// made on the server meanwhile (Update PX4 storing overrides, the Parameters table, the park pitch) used to be
+// written back over by the next save - which is how a motor wiring set on the board went missing from the design.
+let airframeRev = null, pushPending = false, lastLocalEdit = 0, airframeSyncing = false;
+async function syncAirframe(rev) {
+  if (!rev) return;
+  if (airframeRev === null) { airframeRev = rev; return; }
+  const typing = document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName);
+  if (rev === airframeRev || airframeSyncing || pushPending || typing || Date.now() - lastLocalEdit < 1500) return;
+  airframeSyncing = true;
+  try {
+    const af = await api('/api/airframe');
+    setAirframe(af);
+    airframeRev = rev;
+    logLine('[ui] the design changed on the server; reloaded it here');
+  } catch { } finally { airframeSyncing = false; }
+}
 let joyWs = null;          // websocket handle used by the USB remote (declared early: connectWs() runs before the joystick code)
 
 // ============================================================ scene
@@ -119,11 +136,14 @@ function sanitizeNumbers(obj, path = '', bad = []) {
 }
 function pushAirframe(immediate = false) {
   clearTimeout(pushTimer);
+  pushPending = true; lastLocalEdit = Date.now();
   const doPush = async () => {
     try {
       const bad = sanitizeNumbers(airframe);
       if (bad.length) logLine('[ui] empty or invalid number fields set to 0: ' + bad.join(', '));
       const res = await api('/api/airframe', { airframe, keep_state: true });
+      if (res.rev) airframeRev = res.rev;
+      lastLocalEdit = Date.now();
       if (res.airframe) {
         airframe.landed_pitch_deg = res.airframe.landed_pitch_deg;
         airframe.px4_overrides = { ...(airframe.px4_overrides || {}), NLF_LAND_ANG: res.airframe.landed_pitch_deg };
@@ -136,6 +156,7 @@ function pushAirframe(immediate = false) {
       markDirty();
       loadExport();
     } catch (e) { logLine('[ui] airframe rejected: ' + e.message); }
+    finally { pushPending = false; }
   };
   if (immediate) doPush(); else pushTimer = setTimeout(doPush, 120);
 }
@@ -1046,10 +1067,14 @@ function updateFooter() {
   armBtn.textContent = status.armed ? 'Kill' : 'Arm';
   armBtn.title = status.armed ? 'Force disarm immediately (motors stop, even in the air)' : 'Arm the vehicle';
   armBtn.classList.toggle('armed', !!status.armed);
-  armBtn.disabled = (!status.armed && !!status.resetting) || !status.ctl_connected || (!status.armed && !status.arm_ready);
-  if (!status.armed && status.ctl_connected && !status.arm_ready) armBtn.title = 'Not armable yet: ' + (status.arm_block_reason || 'estimator not ready');
+  // Arming is PX4's decision, not this page's: the buttons stay pressable whenever there is a link and no reset is
+  // running, and a refusal comes back in PX4's own words. arm_ready is what PX4 last said, shown as a hint - it is
+  // only reported on a change, so a page that waited for it could stay grey with PX4 perfectly willing to arm.
+  armBtn.disabled = (!status.armed && !!status.resetting) || !status.ctl_connected;
+  armBtn.classList.toggle('not-ready', !status.armed && !!status.ctl_connected && !status.arm_ready);
+  if (!status.armed && status.ctl_connected && !status.arm_ready) armBtn.title = 'PX4 may refuse: ' + (status.arm_block_reason || 'estimator not ready') + ' (press to ask it)';
   const tko = $('#btn-takeoff');
-  if (status.mode === 'sitl' && status.ctl_connected && !status.armed &&
+  if ((status.mode === 'sitl' || status.conn_mode === 'hitl') && status.ctl_connected && !status.armed &&
       !status.arm_ready && !status.resetting &&
       !prearmReportRequestPending && Date.now() - lastPrearmReportRequest > 10000) {
     lastPrearmReportRequest = Date.now();
@@ -1067,7 +1092,8 @@ function updateFooter() {
   if (stagedRc) tko.title = 'First press: RC-controlled nose lift. Once nose ready, press again to climb to 1 m. Lower throttle to request abort/landing.';
   if (manualPrototype) tko.title = 'Simulation only: RC nose lift, then second press for 2 m altitude hold with RC power ceiling and attitude control.';
   if (pilotHandover) tko.title = status.armed ? 'Second press (throttle at minimum): you get the throttle; raise it slowly to lift off' : `Arms, raises the nose to level and waits for "nose ready"; a second press gives you the throttle, PX4 (${pilotHandover === 2 ? 'Altitude' : 'Stabilized'}) takes over once airborne`;
-  tko.disabled = !!status.resetting || !status.ctl_connected || (nativeNoseLift && status.armed && !stagedRc && !pilotHandover) || (!status.armed && !status.arm_ready);
+  tko.disabled = !!status.resetting || !status.ctl_connected || (nativeNoseLift && status.armed && !stagedRc && !pilotHandover);
+  tko.classList.toggle('not-ready', !status.armed && !!status.ctl_connected && !status.arm_ready);
   { const me = $('#motor-enable'); if (me) { const hitl = status.conn_mode === 'hitl'; me.disabled = hitl && (status.armed || !status.ctl_connected); if (me.disabled && me.checked) { stopMotorTest(); me.checked = false; } me.closest('label') && (me.closest('label').title = hitl ? 'Real motor tests require a connected, disarmed flight controller' : ''); } }
   const landButton = $('#btn-land');
   if (landButton) {
@@ -1833,7 +1859,8 @@ async function pollLive(again = true) {
   if (polling) return;
   polling = true;
   let j;
-  try { j = await api('/api/runs/current?since=' + liveRun.rows.length); }
+  // in slices: one big answer stalls the simulation while the server writes it (the next poll takes the rest)
+  try { j = await api('/api/runs/current?limit=2000&since=' + liveRun.rows.length); }
   catch { return; }
   finally { polling = false; }
   if (j.total < liveRun.rows.length || j.since > liveRun.rows.length) {   // the sim was reset: a new run
@@ -2437,7 +2464,7 @@ function connectWs() {
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.type === 'airframe') { setAirframe(m.airframe); }
-    if (m.type === 'state') { lastRc = m.rc || {}; lastManual = m.manual || {}; applyState(m.state); if (m.status) applyStatus(m.status); if (m.log) m.log.forEach(l => logLine(l[1])); if (rcVisible()) renderRcLive(); }
+    if (m.type === 'state') { lastRc = m.rc || {}; lastManual = m.manual || {}; applyState(m.state); if (m.status) { applyStatus(m.status); syncAirframe(m.status.airframe_rev); } if (m.log) m.log.forEach(l => logLine(l[1])); if (rcVisible()) renderRcLive(); }
   };
   ws.onclose = () => { $('#link-light i').classList.remove('on'); console.log('[ui] websocket closed; reconnecting'); setTimeout(connectWs, 800); };
 }

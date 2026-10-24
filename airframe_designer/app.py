@@ -68,6 +68,10 @@ def free_http_port(host: str, port: int, log, tries: int = 20) -> int:
 
 
 def main(argv=None) -> int:
+    # The simulation loop is one thread among the web server's, and it has to step every 4 ms. Python hands the
+    # interpreter between threads every 5 ms by default, so any busy request made the loop wait a whole interval per
+    # handoff and the sensors left in bursts 20-50 ms apart - which a HITL board reads as its sensors failing.
+    sys.setswitchinterval(0.0005)
     ap = argparse.ArgumentParser(prog="airframe-designer ui", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=["sitl", "hitl", "auto"], default="sitl",
                     help="sitl: PX4 SITL; hitl: Pixhawk over USB; auto: hitl if a Pixhawk is plugged in, else sitl")
@@ -124,6 +128,7 @@ def main(argv=None) -> int:
     log(f"[events] metadata: {n_ev} event definitions from {conn.event_decoder.source or 'nowhere'}")
     state = AppState(simulator, conn, args, log_buffer, log)
     state.meta, state.meta_source = param_meta.load_local(args.px4_dir, args.param_meta)
+    conn.param_meta = state.meta                # which parameters PX4 only takes at boot (the model sync asks)
     log(f"[params] metadata: {len(state.meta)} entries from {state.meta_source or 'nowhere (use Fetch descriptions)'}")
 
     # initial connection

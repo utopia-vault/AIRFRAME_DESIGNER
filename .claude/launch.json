@@ -69,6 +69,44 @@
       "port": 8084
     },
     {
+      "name": "v4-nlf-sitl-flatfloor",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "airframe_designer",
+        "ui",
+        "--airframe",
+        "/Users/stefanosfragkoulis/AIRFRAME_REPRO/v4_weighed_card20/airframe_V4_10kg_park-10_nlf_flatfloor.json",
+        "--px4-instance",
+        "2",
+        "--http",
+        "127.0.0.1:8082",
+        "--no-browser",
+        "--mode",
+        "sitl"
+      ],
+      "port": 8082
+    },
+    {
+      "name": "v4-nlf-sitl-baseline",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "airframe_designer",
+        "ui",
+        "--airframe",
+        "/Users/stefanosfragkoulis/AIRFRAME_REPRO/v4_weighed_card20/airframe_V4_10kg_park-10_nlf.json",
+        "--px4-instance",
+        "3",
+        "--http",
+        "127.0.0.1:8083",
+        "--no-browser",
+        "--mode",
+        "sitl"
+      ],
+      "port": 8083
+    },
+    {
       "name": "airframe-designer",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": [

@@ -30,26 +30,57 @@ class NativeSimulator(Simulator):
         before = self.airframe.px4_params_sitl()
         landed_pitch_if_possible(airframe, self.log)
         result = super().set_airframe(airframe)
-        if before != self.airframe.px4_params_sitl():
+        after = self.airframe.px4_params_sitl()
+        if before != after:
+            changed = {k: after.get(k) for k in set(before) | set(after) if before.get(k) != after.get(k)}
             callback = getattr(self, "on_model_parameters_changed", None)
-            if callback: callback()
+            if callback: callback(changed)
         return result
+
+# Parameters PX4 only takes at boot: its own rebootRequired list, plus the allocator's rotor card (the effectiveness
+# matrix is built when control_allocator starts) and the board rotation (the estimator aligns once on the old one).
+RELAUNCH_PREFIXES = ("CA_", "SENS_BOARD_")
+
 
 class NativeConnectionManager(ConnectionManager):
     def __init__(self, simulator, args, log):
         super().__init__(simulator, args, log)
         self._model_timer = None
         self._model_revision = 0
+        self.param_meta: dict = {}                    # PX4's parameter metadata, set by the server (rebootRequired)
         simulator.on_model_parameters_changed = self.queue_model_sync
 
-    def queue_model_sync(self):
+    def needs_relaunch(self, changed: dict | None) -> bool:
+        """Does this set of changed parameters need PX4 restarted, or can it be written to the running PX4?
+        A parameter that left the export also needs the restart: PX4 keeps the old value until it boots without it."""
+        if not changed:
+            return changed is None
+        for name, value in changed.items():
+            if value is None or name.startswith(RELAUNCH_PREFIXES) or (self.param_meta.get(name) or {}).get("reboot"):
+                return True
+        return False
+
+    def queue_model_sync(self, changed: dict | None = None):
         if self.mode != "sitl" or not self.args.launch_px4:
+            return
+        link = self.link
+        if not self.needs_relaunch(changed) and link is not None and link.ctl_connected:
+            # A gain, a module setting: written to the running PX4, in the background. Relaunching for it stopped the
+            # simulation, put the aircraft back on the ground and greyed Arm and Takeoff for every keystroke.
+            def push():
+                try:
+                    results = link.set_params(dict(changed), lambda name, res: None)
+                    bad = [r["name"] for r in results if not r.get("ok")]
+                    self.log(f"[PX4] {len(results) - len(bad)} changed parameter(s) written to the running PX4"
+                             + (f"; not accepted: {bad}" if bad else ""))
+                except Exception as exc:
+                    self.log(f"[PX4] could not write the changed parameters: {exc}")
+            threading.Thread(target=push, daemon=True).start()
             return
         with self._lock:
             self._model_revision += 1
             revision = self._model_revision
             if self._model_timer: self._model_timer.cancel()
-            self._reset_busy_until = time.time() + 60
             self._model_timer = threading.Timer(1.0, self._sync_model, args=(revision,))
             self._model_timer.daemon = True
             self._model_timer.start()
@@ -64,13 +95,14 @@ class NativeConnectionManager(ConnectionManager):
                 return
             try:
                 self.log("[PX4] Applying model changes automatically and resetting the simulator")
+                self._reset_busy_until = time.time() + 30      # only while the relaunch actually runs
                 self.connect_sitl(True)
-                self._reset_busy_until = time.time() + 8
+                self._reset_busy_until = time.time() + 1
                 self.log("[PX4] Current model parameters loaded; waiting for preflight checks")
             except Exception as exc:
                 self.error = str(exc)
                 self.log(f"[PX4] Automatic model update failed: {exc}")
-                self._reset_busy_until = time.time() + 60
+                self._reset_busy_until = 0          # said out loud; nothing to wait for
 
     def _launch_sitl(self, instance):
         current = self.sim.airframe

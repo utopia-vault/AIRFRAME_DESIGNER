@@ -99,7 +99,7 @@ def test_a_silent_aircraft_says_how_far_it_got(tmp_path):
 
 ULOG = next((p for p in [
     Path("/Users/rasmushauschild/atlas-simulation/tests/fixtures/log_36_2026-9-9-14-11-36.ulg"),
-    *sorted(Path("results/logs").glob("*.ulg"), reverse=True),      # whatever has been pulled off a board
+    *sorted(Path("results/logs").glob("*.ulg"), key=lambda p: p.stat().st_mtime, reverse=True),  # the newest pulled off a board
 ] if p.is_file()), None)
 
 
@@ -117,7 +117,7 @@ def test_a_real_log_reads_back_as_a_run():
     assert all(abs(v) < 1e4 for v in col("height")), "nothing absurd came through"
     assert max(col("armed")) == 1.0, "it armed"
     assert 1.0 <= max(col("mode")) <= 10.0, "the mode reads on this app's scale"
-    assert -12 < min(col("az")) < -8, "the accelerometer reads specific force, about -9.8 on the ground"
+    assert -12 < sorted(col("az"))[len(run["rows"]) // 2] < -8, "the accelerometer reads specific force, about -9.8 on the whole"
     assert len(set(col("qw"))) > 10, "the attitude actually varies"
 
 

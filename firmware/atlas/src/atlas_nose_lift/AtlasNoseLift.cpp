@@ -81,6 +81,11 @@ private:
  bool _pilot_mode{false}, _ready_announced{false};
  float _flight_alt{1.f}, _pilot_cap{0.f};
  bool _pilot_ground_abort{false};
+ // PX4's own Land (an RC-loss failsafe, a ground station) ends with the rear feet on the ground, the nose up and PX4
+ // cutting the thrust, which drops the nose. From the moment PX4's land detector sees that contact the module holds the
+ // front fans through the allocator floor and lowers the nose as in its own landing; PX4 stays in Land throughout, and
+ // the module lets go the moment PX4 leaves Land or disarms.
+ bool _px4_land_takeover{false};
  float _pilot_abort_limit9{0.f}, _pilot_abort_limit10{0.f}, _pilot_abort_limitc{0.f};
  // Pilot handover (NLF_PILOT): after the nose lift PX4 goes to Stabilized or Altitude mode and the pilot's throttle lifts
  // the aircraft. Nothing in this path needs a position estimate. The front-fan floor (allocator overlay, max of PX4's
@@ -296,6 +301,7 @@ private:
  }
  void fail(const char *reason, const vehicle_status_s &status, bool airborne) {
   NL_ERR("abort: %s", reason); clear_floor();
+  if (_px4_land_takeover) { _px4_land_takeover=false; _phase=Idle; NL_WARN("the landing is PX4's again"); return; }
   // An estimator fault during a bounded ground abort must not hand low-power
   // direct control to a full-thrust position landing controller.
   if (_pilot_ground_abort && _phase==LowerNose) { airborne=false; }
@@ -367,9 +373,9 @@ private:
    if (_phase>=Prime && _phase<=LowerNose) { fail("module stopped",status,_phase!=Prime && _phase!=Lift); }
    if (_phase!=Aborting && _phase!=Shutdown) { clear_floor(); ScheduleClear(); exit_and_cleanup(desc); return; }
   }
-  if (_phase==Shutdown && _pilot_handover && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
-   // Pilot handover: the nose rests on its feet, PX4 is still in the pilot's mode. Ramp the floor out and disarm.
-   if (!armed) { clear_floor(); NL_INFO("landing complete: all motors off and disarmed"); _phase=Idle; return; }
+  if (_phase==Shutdown && (_pilot_handover || _px4_land_takeover) && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+   // Pilot handover or PX4's Land: the nose rests on its feet, PX4 is still in its own mode. Ramp the floor out and disarm.
+   if (!armed) { clear_floor(); NL_INFO("landing complete: all motors off and disarmed"); _phase=Idle; _px4_land_takeover=false; return; }
    const float scale=math::constrain(1.f-(now-_phase_start)*1e-6f/2.f,0.f,1.f);
    publish_floor_front(now,att,_abort9*scale,_abort10*scale,_abortc*scale);
    if (now-_phase_start>2500_ms && now-_last_command>1_s) {
@@ -448,7 +454,7 @@ private:
     NL_ERR("staged mode needs valid landing rates and COM_DISARM_LAND >= 90 s"); return;
    }
    _pilot_handover=want_pilot; _pilot_nav=_pilot.get()==2 ? vehicle_status_s::NAVIGATION_STATE_ALTCTL : vehicle_status_s::NAVIGATION_STATE_STAB;
-   _landing=false; _handover_requested=false; _takeover_request=false; _was_high=false; _lift=0.f; _liftoff_since=0; _takeover_since=0; _stick_lost_since=0; _contact_dwell=0;
+   _px4_land_takeover=false; _landing=false; _handover_requested=false; _takeover_request=false; _was_high=false; _lift=0.f; _liftoff_since=0; _takeover_since=0; _stick_lost_since=0; _contact_dwell=0;
    _pilot_mode=!want_pilot && _rc_throttle.get()!=0; _pilot_gate.reset(); _pilot_cap=0.f; _pilot_ground_abort=false; _ready_announced=false; _flight_alt=_pilot_mode ? 1.f : _alt.get();
    _phase=Prime; _start=now; _phase_start=now; _dwell=0; _fade_start=0; _integral=0.f; _cmd9=0.f; _cmd10=0.f; _cmdc=0.f; _last_command=0; _was_armed=false; _rng_wait_announced=false; _rng_latched=false; _rng_ok_since=0;
    _rest_pitch=math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
@@ -507,10 +513,29 @@ private:
     command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); _last_command=now;
    }
   }
+  if (_px4_land_takeover && (!armed || (status.nav_state!=vehicle_status_s::NAVIGATION_STATE_AUTO_LAND
+      && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD))) {
+   clear_floor(); _px4_land_takeover=false; _phase=Idle;
+   if (armed) { NL_WARN("PX4 left Land: the nose is the pilot's again"); } else { NL_INFO("landing complete: disarmed"); }
+   return;
+  }
+  if ((_phase==Idle || _phase==Failed) && armed && _enable.get() && status.nav_state==vehicle_status_s::NAVIGATION_STATE_AUTO_LAND
+      && (land.ground_contact || land.maybe_landed) && !land.landed && now-att.timestamp<200_ms) {
+   updateParams();
+   _hover_angle=_hover_param.get();
+   if (atlas_model_matches(_hover_angle, _ground) && PX4_ISFINITE(_land_angle_param.get())
+       && PX4_ISFINITE(_down_rate.get()) && _down_rate.get()>=1.f && _down_rate.get()<=5.f) {
+    _px4_land_takeover=true; _pilot_ground_abort=false; _pilot_handover=false; _pilot_mode=false;
+    _landing_angle=_land_angle_param.get(); _rest_pitch=_landing_angle;
+    _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _contact_dwell=0; _touch_z=pos.z; _last_command=0;
+    _lower_target=structural_pitch_deg(att);
+    NL_INFO("PX4 Land is on the rear feet: the module lowers the nose");
+   }
+  }
   if (_phase==Idle || _phase==Failed) { return; }
   const bool xy_bad=!pos.xy_valid || !PX4_ISFINITE(pos.x) || !PX4_ISFINITE(pos.y) || !PX4_ISFINITE(pos.vx) || !PX4_ISFINITE(pos.vy);
   if (now-att.timestamp>200_ms || now-rates.timestamp>200_ms || now-pos.timestamp>500_ms ||
-      (!_pilot_handover && xy_bad) || !pos.z_valid || !PX4_ISFINITE(_pitch) || !PX4_ISFINITE(e.phi()) ||
+      (!_pilot_handover && !_px4_land_takeover && xy_bad) || !pos.z_valid || !PX4_ISFINITE(_pitch) || !PX4_ISFINITE(e.phi()) ||
       !PX4_ISFINITE(e.psi()) || !PX4_ISFINITE(rates.xyz[0]) || !PX4_ISFINITE(rates.xyz[1]) || !PX4_ISFINITE(rates.xyz[2]) || !PX4_ISFINITE(pos.z) || !PX4_ISFINITE(pos.vz)) {
    fail("stale or invalid estimate",status,_phase!=Prime && _phase!=Lift); return;
   }
@@ -603,8 +628,11 @@ private:
    } else {
     // Pilot handover: PX4 is in the pilot's mode. Its attitude loop would fight a nose going below level (rear motors
     // up), so take the motors back through Offboard direct actuators; until PX4 switches, the floor carries the nose.
-    offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
-    if (now-_last_command>500_ms) { command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); _last_command=now; }
+    // Under PX4's Land the floor alone carries the nose and the mode is left to PX4.
+    if (!_px4_land_takeover) {
+     offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
+     if (now-_last_command>500_ms) { command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); _last_command=now; }
+    }
     publish_floor_front(now,att,_cmd9,_cmd10,_cmdc);
    }
    // A stopped pitch despite a continuing nose-down request indicates nose-foot support.

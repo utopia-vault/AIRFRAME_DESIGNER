@@ -3156,7 +3156,7 @@ function renderRcBoard() {
   const n = 18;   // PX4's RC input carries 18 channels at most; rows beyond what the receiver sends stay empty
   const funcs = rcKnownFuncs();
   const names = (airframe && airframe.design && airframe.design.rc_names) || {};
-  const key = `${n}|${funcs.map(f => f.p + ':' + pv(f.p, 0)).join(',')}|${[1, 2, 3, 4, 5, 6].map(i => pv('COM_FLTMODE' + i, -1)).join(',')}|${JSON.stringify(names)}`;
+  const key = `${n}|${funcs.map(f => f.p + ':' + pv(f.p, 0)).join(',')}|${pv('NLF_RC_CH', 0)},${pv('NLF_RC_LAND', 0)}|${[1, 2, 3, 4, 5, 6].map(i => pv('COM_FLTMODE' + i, -1)).join(',')}|${JSON.stringify(names)}`;
   if (el.dataset.mode !== 'rc' || rcBuiltFor !== key) {
     el.dataset.mode = 'rc'; rcBuiltFor = key;
     const modeVals = ((meta.COM_FLTMODE1 || {}).values || [{ value: -1, description: 'Unassigned' }, { value: 0, description: 'Manual' }, { value: 1, description: 'Altitude' }, { value: 2, description: 'Position' }, { value: 3, description: 'Mission' }, { value: 4, description: 'Hold' }, { value: 5, description: 'Return' }, { value: 6, description: 'Acro' }, { value: 7, description: 'Offboard' }, { value: 8, description: 'Stabilized' }, { value: 10, description: 'Takeoff' }, { value: 11, description: 'Land' }]);
@@ -3165,7 +3165,10 @@ function renderRcBoard() {
       const ch = i + 1, f = rcFuncOf(ch);
       const fnSel = `<select class="rc-fn-sel" data-ch="${ch}"><option value="">–</option>${funcs.map(x => `<option value="${x.p}" ${f && f.p === x.p ? 'selected' : ''}>${x.label}</option>`).join('')}</select>`;
       let cells = '<span class="rc-c"></span><span class="rc-c"></span><span class="rc-c"></span>';
-      if (f && f.kind === 'mode') cells = [0, 50, 100].map(pos => `<span class="rc-c" data-pos="${pos}">${modeSel(pos)}</span>`).join('');
+      // the nose-lift module can sit on the ends of the mode switch (NLF_RC_CH = 7: up takes off, NLF_RC_LAND = -7: down lands)
+      const modTag = (pos) => (pos === 100 && pv('NLF_RC_CH', 0) === ch) || (pos === 0 && pv('NLF_RC_CH', 0) === -ch) ? '<span class="rc-tag on" title="NLF_RC_CH: the nose-lift module takes off when the switch moves here">+ module takeoff</span>'
+        : (pos === 0 && pv('NLF_RC_LAND', 0) === -ch) || (pos === 100 && pv('NLF_RC_LAND', 0) === ch) ? '<span class="rc-tag on" title="NLF_RC_LAND: the nose-lift module lands when the switch moves here">+ module land</span>' : '';
+      if (f && f.kind === 'mode') cells = [0, 50, 100].map(pos => `<span class="rc-c" data-pos="${pos}">${modeSel(pos)}${modTag(pos)}</span>`).join('');
       else if (f && f.kind === 'switch') cells = [0, 50, 100].map(pos => `<span class="rc-c" data-pos="${pos}">${f.th ? `<button class="rc-sw ${switchOnAt(f, pos) ? 'on' : ''}" data-ch="${ch}" data-pos="${pos}" title="click: ${f.label} is ON at this position">${switchOnAt(f, pos) ? 'ON' : 'off'}</button>` : `<span class="rc-dim">${pos === 100 ? 'ON' : 'off'}</span>`}</span>`).join('');
       else if (f && f.kind === 'stick') cells = `<span class="rc-c rc-dim">${f.p === 'RC_MAP_THROTTLE' ? 'idle' : 'full −'}</span><span class="rc-c rc-dim">centre</span><span class="rc-c rc-dim">${f.p === 'RC_MAP_THROTTLE' ? 'full' : 'full +'}</span>`;
       else if (f && f.kind === 'button') cells = `<span class="rc-c rc-dim" data-pos="0">released</span><span class="rc-c rc-dim" data-pos="50">–</span><span class="rc-c" data-pos="100"><span class="rc-tag on">${f.p === 'NLF_RC_CH' ? 'take off' : 'land'}</span></span>`;
@@ -3389,9 +3392,9 @@ function joyRenderMap() { rcBuiltFor = ''; }   // the USB remote shares the chan
 // The value of whatever is mapped to this function, from the app-side remote, using the board's own channel
 // assignment and calibration: the transmitter behaves the same here as it does through the receiver.
 function rcFuncValue(pwm, p) {
-  const c = pv(p, 0);
-  if (!c || c < 1 || c > pwm.length || !pwm[c - 1]) return 0;
-  const v = rcNorm(c, pwm[c - 1]);
+  const raw = pv(p, 0), c = Math.abs(raw);       // a negative channel is the low end of that switch (NLF_RC_LAND = -7)
+  if (!c || c > pwm.length || !pwm[c - 1]) return 0;
+  const v = rcNorm(c, pwm[c - 1]) * (raw < 0 ? -1 : 1);
   return Math.abs(v) < 0.02 ? 0 : v;              // deadband
 }
 // Throttle is not a centred stick: PX4 scales it from the channel's minimum to its maximum, and calibration puts

@@ -170,18 +170,18 @@ parameters:
       max: 5
     NLF_RC_CH:
       description:
-        short: RC channel of the takeoff button
-        long: 0 = none. A momentary button on this channel requests the ground sequence (nose lift, climb, hover) when it is pressed (channel goes high).
+        short: RC channel that requests the takeoff
+        long: 0 = none. The takeoff (nose lift, climb, hover) is requested when this channel moves into its firing position - high for a positive number, low for a negative one (e.g. 7 = channel 7 up). A switch already there at boot does nothing.
       type: int32
-      min: 0
+      min: -18
       max: 18
       default: 0
     NLF_RC_LAND:
       description:
-        short: RC channel of the landing button
-        long: 0 = none. A momentary button on this channel requests the landing sequence (rear legs, nose down, motors off) when it is pressed while hovering.
+        short: RC channel that requests the landing
+        long: 0 = none. The landing (rear legs, nose down, motors off) is requested when this channel moves into its firing position while hovering - high for a positive number, low for a negative one (e.g. -7 = channel 7 down, the other end of the switch that takes off).
       type: int32
-      min: 0
+      min: -18
       max: 18
       default: 0
     NLF_SPOOL_CMD:

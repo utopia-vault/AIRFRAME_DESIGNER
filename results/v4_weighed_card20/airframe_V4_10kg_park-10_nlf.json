@@ -1183,7 +1183,13 @@
     "MPC_TKO_SPEED": 1.5,
     "MIS_TAKEOFF_ALT": 2.5,
     "NLF_ENABLE": 1,
-    "NLF_ALT": 1.7
+    "NLF_ALT": 1.7,
+    "NLF_RC_CH": 7,
+    "NLF_RC_LAND": -7,
+    "COM_FLTMODE1": 2,
+    "COM_FLTMODE2": 2,
+    "COM_FLTMODE5": 2,
+    "COM_FLTMODE6": 2
   },
   "design": {
     "v4": {

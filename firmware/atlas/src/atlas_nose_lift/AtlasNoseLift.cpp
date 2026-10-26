@@ -20,6 +20,7 @@
 #include "Model.hpp"
 #include "PilotGate.hpp"
 #include "PilotHandover.hpp"
+#include "RcTrigger.hpp"
 #include <uORB/topics/manual_control_setpoint.h>
 #include "ManualGate.hpp"
 #include "ManualAltitude.hpp"
@@ -209,8 +210,9 @@ private:
  // External trigger, the same on SITL, HITL and the real aircraft: MAV_CMD_USER_1 (31010) with param1 = 1 (takeoff)
  // or 2 (land), sent by any ground station or the designer app. The shell commands remain for the console.
  static constexpr uint32_t CMD_ATLAS = 31010;
- // Remote-control triggers: two momentary buttons. NLF_RC_CH requests takeoff on its rising edge, NLF_RC_LAND
- // requests landing on its rising edge; nothing happens for buttons already pressed at boot.
+ // Remote-control triggers. NLF_RC_CH requests the takeoff and NLF_RC_LAND the landing when their channel moves into
+ // its firing position: high for a positive channel number, low for a negative one, so the two can be the ends of the
+ // flight-mode switch in place of PX4's Takeoff and Land slots (RcTrigger.hpp). A switch already there at boot does nothing.
  uORB::Subscription _rc_sub{ORB_ID(rc_channels)};
  // Kill switch: PX4 keeps the vehicle armed for 5 s after a kill and re-enables the motors if the switch comes back
  // within that time. Disarm at once instead, so releasing the switch can never restart anything.
@@ -225,19 +227,18 @@ private:
   }
   _kill_seen = aa.kill;
  }
- bool _btn_to{false}, _btn_land{false}, _rc_seen{false};
+ AtlasRcTrigger _trig_to{}, _trig_land{};
  void poll_rc_switch() {
   const int ct = _rc_ch.get(), cl = _rc_land.get();
-  if (ct < 1 && cl < 1) { _rc_seen = false; return; }
+  if (ct == 0) { _trig_to.forget(); }
+  if (cl == 0) { _trig_land.forget(); }
+  if (ct == 0 && cl == 0) { return; }
   rc_channels_s rc{};
   if (!_rc_sub.update(&rc)) { return; }
   if (rc.signal_lost) { return; }
-  const bool to = ct >= 1 && ct <= rc.channel_count && rc.channels[ct - 1] > 0.5f;
-  const bool land = cl >= 1 && cl <= rc.channel_count && rc.channels[cl - 1] > 0.5f;
-  if (!_rc_seen) { _rc_seen = true; _btn_to = to; _btn_land = land; return; }
-  if (to && !_btn_to) { _request.store(true); }
-  if (land && !_btn_land) { _land_request.store(true); }
-  _btn_to = to; _btn_land = land;
+  const int n = math::min((int)rc.channel_count, 18);
+  if (ct != 0 && _trig_to.edge(AtlasRcTrigger::active(ct, rc.channels, n))) { _request.store(true); }
+  if (cl != 0 && _trig_land.edge(AtlasRcTrigger::active(cl, rc.channels, n))) { _land_request.store(true); }
  }
  uORB::Subscription _cmd_sub{ORB_ID(vehicle_command)};
  uORB::Publication<vehicle_command_ack_s> _ack_pub{ORB_ID(vehicle_command_ack)};

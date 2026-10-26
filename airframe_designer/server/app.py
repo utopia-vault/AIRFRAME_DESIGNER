@@ -48,10 +48,13 @@ PX4_MAIN_MODE_NAMES = {1: "Manual", 2: "Altitude", 3: "Position", 4: "Auto", 5: 
 PX4_SUB_MODE_NAMES = {1: "Ready", 2: "Takeoff", 3: "Hold", 4: "Mission", 5: "RTL", 6: "Land", 8: "Follow", 9: "Precland"}
 
 
-def mode_name(custom_mode: int) -> str:
+def mode_name(custom_mode: int, external: dict[int, str] | None = None) -> str:
     main = (custom_mode >> 16) & 0xFF
     sub = (custom_mode >> 24) & 0xFF
     name = PX4_MAIN_MODE_NAMES.get(main, f"mode{main}")
+    if main == 4 and 11 <= sub <= 18:
+        # a mode registered from outside the commander (PX4 sub-modes 11..18 are its external modes 1..8)
+        return (external or {}).get(sub - 10, f"External {sub - 10}")
     if main == 4:
         name = PX4_SUB_MODE_NAMES.get(sub, f"Auto{sub}")
     return name
@@ -180,7 +183,7 @@ def build_app(state: AppState) -> FastAPI:
 
     def status_dict() -> dict:
         s = link.status()
-        s["mode_name"] = mode_name(s["custom_mode"])
+        s["mode_name"] = mode_name(s["custom_mode"], getattr(link, "external_modes", None))
         s["px4_running"] = state.conn.px4_running()
         s["params_session"] = getattr(state.conn, "_params_session", 0)   # bumps on every (re)connect: the page re-downloads
         s["conn_mode"] = state.conn.mode

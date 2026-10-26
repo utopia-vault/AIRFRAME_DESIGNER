@@ -30,7 +30,7 @@ Run this command from the repository root. Select the port and instance with `--
 - `src/atlas_nose_lift/AtlasNoseLift.cpp`: native PX4 scheduled module using estimated attitude, angular velocity, local position and land detection. It does not receive simulator truth.
 - `src/atlas_nose_lift/Model.hpp`: validates the fixed rotor positions, axes, reaction-torque coefficients, board offset and thrust mapping before activation.
 - `src/atlas_nose_lift/params.yaml`: module parameters, disabled by default.
-- `allocator_overlay/`: a small allocator addition preserving nose support during handover, without changing the original PX4 source tree. It uses pre-floor actuator feedback, accepts the floor only when armed in Offboard, expires it after 100 ms, and preserves NaN motor stops.
+- `allocator_overlay/`: a small allocator addition preserving nose support during handover, without changing the original PX4 source tree. It uses pre-floor actuator feedback, accepts the floor only when armed in Offboard or in a registered mode (the module's own Takeoff and Land, `NLF_MODES`), expires it after 100 ms, and preserves NaN motor stops.
 - `msg/`: two private uORB topics for support and raw allocation feedback.
 - `atlas_07d-nose-lift.sitl.params`: reproducible SITL parameter set, including simulator defaults. Parameters alone cannot install the module.
 - `test_sitl.py`, `analyze_results.py`, `validation.json`, `takeoff-validation.png`: repeatable tests and recorded results.

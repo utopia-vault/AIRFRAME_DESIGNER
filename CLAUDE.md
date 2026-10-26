@@ -147,6 +147,23 @@ airframes/    schema-2 JSON (docs/SCHEMA.md);  scenarios/  studies/  results/ (g
     the phase index; phase 0 is the wait for PX4, so step i is phase i + 1) and nothing is drawn over the
     3D view. Stop stops the sequence, not the simulation - the aircraft keeps flying under PX4, and a
     sequence that fails no longer freezes the loop, because the graph already holds what happened.
+  - **The nose-lift module *is* PX4's Takeoff and Land** (`NLF_MODES` = 1, the default). It registers two
+    modes with the commander that replace PX4's own (`register_ext_component_request` with
+    `replace_internal_mode`, the mechanism behind PX4's external modes), so the flight-mode switch slots
+    stay Takeoff and Land, and whatever selects them - the switch, a ground station, the takeoff command,
+    a failsafe Land - flies the nose lift or the nose lowering. In its own mode the module says which
+    setpoints it sends (`setpoint_config`: motors directly on the legs, a position otherwise) and, because
+    PX4's flight tasks do not run in a registered mode, publishes `vehicle_constraints.want_takeoff` the way
+    mc_pos_control works it out for itself in Offboard - without it the controller idles on the ground. It
+    asks for a position only while flying (PX4 loses it with the nose down, and a mode that demanded it
+    then was failsafed into Descend), keeps the hover after a takeoff (Hold needs a GPS), and hands a
+    landing it cannot fly to PX4's Land by no longer answering the commander's arming checks: the
+    commander falls back within a second, and the rear-foot takeover still lowers the nose. In the
+    heartbeat the modes are only "Auto, sub-mode 10 + n"; the module names them in a STATUSTEXT
+    ("ATLAS Takeoff (external mode 2)", under 50 characters) and `PX4Link.external_modes` /
+    `mode_name()` show that name. `NLF_RC_CH` / `NLF_RC_LAND` remain for a design with `NLF_MODES` = 0.
+    In SITL, stopping the module in the air stalls lockstep for a while, in Offboard as much as in its
+    modes; a board has no lockstep.
   - **Live control** is the aircraft right now: flight mode, the remote, the wind, the motor sliders.
   **Nothing asks with `window.confirm()`**: this app's web view answers it `false` instantly, without
   ever showing a dialog, so a control guarded by it can never be switched on - the motor-slider checkbox

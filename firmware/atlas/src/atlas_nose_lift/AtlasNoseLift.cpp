@@ -35,6 +35,13 @@
 #include <uORB/topics/rc_channels.h>
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/estimator_aid_source1d.h>
+#include <uORB/topics/register_ext_component_request.h>
+#include <uORB/topics/register_ext_component_reply.h>
+#include <uORB/topics/unregister_ext_component.h>
+#include <uORB/topics/arming_check_request.h>
+#include <uORB/topics/arming_check_reply.h>
+#include <uORB/topics/setpoint_config.h>
+#include <uORB/topics/vehicle_constraints.h>
 #include <systemlib/mavlink_log.h>
 using namespace time_literals;
 // Separate stack for the sequencer: manual and automatic controller frames must
@@ -67,7 +74,12 @@ public:
   PRINT_MODULE_USAGE_COMMAND("start"); PRINT_MODULE_USAGE_COMMAND("takeoff"); PRINT_MODULE_USAGE_COMMAND("land");
   PRINT_MODULE_USAGE_DEFAULT_COMMANDS(); return 0;
  }
- int print_status() override { if (_manual_latched) { PX4_INFO("simulation manual phase=%d thrust=%.3f", int(_manual.state), double(_manual.thrust)); return 0; } PX4_INFO("phase=%d pitch=%.2f front9=%.3f", int(_phase), double(_pitch), double(_cmd9)); return 0; }
+ int print_status() override {
+  if (_manual_latched) { PX4_INFO("simulation manual phase=%d thrust=%.3f", int(_manual.state), double(_manual.thrust)); return 0; }
+  PX4_INFO("phase=%d pitch=%.2f front9=%.3f", int(_phase), double(_pitch), double(_cmd9));
+  PX4_INFO("modes: takeoff %d, land %d (nav states; -1 = PX4's own)%s", int(_own[TO].mode_id), int(_own[LAND].mode_id), _land_fallback ? ", landing handed to PX4" : "");
+  return 0;
+ }
 private:
 #include "ManualMode.hpp"
  enum Phase { Idle, Prime, Lift, Spool, Climb, Hover, Pilot, PilotGround, Retake, Descend, LowerNose, Shutdown, Aborting, Failed };   // Retake: taking a PX4 hover back into Offboard to land; Pilot/PilotGround: NLF_PILOT (PX4 flies / the module flies the ground with the pilot's throttle)
@@ -259,6 +271,126 @@ private:
    _ack_pub.publish(ack);
   }
  }
+ // PX4's Takeoff and Land, flown by this module (NLF_MODES = 1). The module registers two modes with the commander that
+ // replace PX4's own (ModeManagement, the mechanism behind PX4's external modes), so whatever selects Takeoff or Land -
+ // the flight-mode switch, a ground station, the takeoff command, a failsafe - selects the nose lift or the nose lowering
+ // instead, and the switch slots keep their names. In its own mode the module tells the commander which setpoints it
+ // sends (the motors directly while on the legs, a position on the way up and down), as offboard_control_mode does in
+ // Offboard. The commander asks every registered mode three times a second whether it is alive and puts PX4's own back
+ // within a second when one stops answering: that is how the module hands a landing it cannot fly to PX4's Land.
+ struct OwnMode { const char *name; uint8_t replaces; uint64_t request_id; int8_t mode_id; int8_t check_id; uint16_t type; bool refused; };
+ enum { TO=0, LAND=1 };
+ OwnMode _own[2]{
+  {"ATLAS Takeoff", vehicle_status_s::NAVIGATION_STATE_AUTO_TAKEOFF, 0x41544c4153544f01ULL, -1, -1, 0, false},
+  {"ATLAS Land", vehicle_status_s::NAVIGATION_STATE_AUTO_LAND, 0x41544c41534c4401ULL, -1, -1, 0, false}};
+ hrt_abstime _register_sent{}, _setpoint_sent{};
+ bool _land_fallback{false};   // the module gave a landing up and PX4's own Land flies it; cleared on disarm
+ uint8_t _last_nav{0xff};
+ uORB::Publication<register_ext_component_request_s> _register_pub{ORB_ID(register_ext_component_request)};
+ uORB::Publication<unregister_ext_component_s> _unregister_pub{ORB_ID(unregister_ext_component)};
+ uORB::Publication<arming_check_reply_s> _check_reply_pub{ORB_ID(arming_check_reply)};
+ uORB::Publication<setpoint_config_s> _setpoint_config_pub{ORB_ID(setpoint_config)};
+ uORB::Publication<vehicle_constraints_s> _constraints_pub{ORB_ID(vehicle_constraints)};
+ uORB::Subscription _register_reply_sub{ORB_ID(register_ext_component_reply)};
+ uORB::Subscription _check_request_sub{ORB_ID(arming_check_request)};
+ bool in_mode(const vehicle_status_s &s, int which) const { return _own[which].mode_id>=0 && s.nav_state==(uint8_t)_own[which].mode_id; }
+ bool modes_ready() const { return _own[TO].mode_id>=0 && _own[LAND].mode_id>=0; }
+ // The module flies the vehicle: in Offboard (asked for without the modes, and by the pilot handover) or in its own modes.
+ bool owned(const vehicle_status_s &s) const { return s.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD || in_mode(s,TO) || in_mode(s,LAND); }
+ // The mode a takeoff (land = false) or a landing is flown in: the module's own, or Offboard without them.
+ bool in_flying_mode(const vehicle_status_s &s, bool land) const {
+  return modes_ready() ? in_mode(s,land ? LAND : TO) : s.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD;
+ }
+ // Asking for PX4's Takeoff (AUTO 2) or Land (AUTO 6) is asking for the module's own: the commander swaps them.
+ void request_flying_mode(const vehicle_status_s &status, bool land) {
+  if (modes_ready()) { command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,4.f,status,land ? 6.f : 2.f); }
+  else { command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); }
+ }
+ static int32_t param_int(const char *name) { int32_t v=0; param_get(param_find(name),&v); return v; }
+ void unregister_mode(OwnMode &m) {
+  unregister_ext_component_s u{}; u.timestamp=hrt_absolute_time();
+  strncpy(u.name,m.name,sizeof(u.name)-1); u.arming_check_id=m.check_id; u.mode_id=m.mode_id;
+  _unregister_pub.publish(u); m.mode_id=-1; m.check_id=-1; m.type=0;
+ }
+ void manage_modes(bool armed, hrt_abstime now) {
+  register_ext_component_reply_s reply{};
+  while (_register_reply_sub.update(&reply)) {
+   for (auto &m : _own) {
+    if (reply.request_id!=m.request_id || m.mode_id>=0) { continue; }
+    if (reply.success && reply.mode_id>=0) {
+     m.mode_id=reply.mode_id; m.check_id=reply.arming_check_id; m.type=0;
+     // The number is what a ground station sees in the heartbeat (Auto, sub-mode 10 + n): the app names the mode from
+     // this line, which has to fit in one STATUSTEXT (50 characters).
+     NL_INFO("%s (external mode %d) replaces %s", m.name, int(m.mode_id)-vehicle_status_s::NAVIGATION_STATE_EXTERNAL1+1,
+             m.replaces==vehicle_status_s::NAVIGATION_STATE_AUTO_TAKEOFF ? "Takeoff" : "Land");
+    } else if (!m.refused) { m.refused=true; NL_ERR("PX4 refused the %s mode: its own stays", m.name); }
+   }
+  }
+  arming_check_request_s request{};
+  if (_check_request_sub.update(&request)) {
+   for (int i=0;i<2;i++) {
+    // A landing given up is PX4's: not answering makes the commander fly its own Land instead of this mode.
+    if (_own[i].check_id<0 || (i==LAND && _land_fallback)) { continue; }
+    arming_check_reply_s r{}; r.timestamp=now; r.request_id=request.request_id; r.registration_id=_own[i].check_id;
+    r.health_component_index=arming_check_reply_s::HEALTH_COMPONENT_INDEX_NONE; r.can_arm_and_run=true;
+    // A position is needed to fly, not to sit on the legs: once the nose is down PX4 can lose it (the H-flow looks at
+    // the ground from a few centimetres), and a mode that demanded it then would be failsafed out of its own shutdown.
+    const bool flying=!direct_phase();
+    r.mode_req_angular_velocity=true; r.mode_req_attitude=true; r.mode_req_local_alt=flying; r.mode_req_local_position=flying;
+    _check_reply_pub.publish(r);
+   }
+  }
+  if (armed || now-_register_sent<1_s) { return; }   // the commander takes registrations on the ground only
+  _register_sent=now;
+  if (_land_fallback) {
+   // Landed after giving a landing up: register the landing mode afresh, so it does not stay marked unresponsive.
+   _land_fallback=false;
+   if (_own[LAND].mode_id>=0) { unregister_mode(_own[LAND]); return; }
+  }
+  bool want=param_int("NLF_ENABLE")!=0 && param_int("NLF_MODES")!=0;
+#if !defined(CONFIG_ARCH_BOARD_PX4_SITL)
+  want=want && param_int("NLF_HW_OK")==1;
+#endif
+  for (auto &m : _own) {
+   if (want && m.mode_id<0 && !m.refused) {
+    register_ext_component_request_s r{}; r.timestamp=now; r.request_id=m.request_id;
+    strncpy(r.name,m.name,sizeof(r.name)-1);
+    r.px4_ros2_api_version=register_ext_component_request_s::LATEST_PX4_ROS2_API_VERSION;
+    r.register_arming_check=true; r.register_mode=true;
+    r.enable_replace_internal_mode=true; r.replace_internal_mode=m.replaces;
+    _register_pub.publish(r);
+   } else if (!want && m.mode_id>=0) {
+    NL_INFO("%s removed: PX4's own is back", m.name); unregister_mode(m);
+   }
+   if (!want) { m.refused=false; }
+  }
+ }
+ // A position setpoint in the module's own mode. PX4's flight tasks, which normally tell the position controller that a
+ // setpoint above the vehicle is a takeoff, do not run in a registered mode, and without that the controller holds the
+ // motors at idle on the ground: say it here exactly as mc_pos_control says it for itself in Offboard.
+ void publish_trajectory(trajectory_setpoint_s &sp, const vehicle_status_s &status, const vehicle_local_position_s &pos, bool armed) {
+  _traj_pub.publish(sp);
+  if (!in_mode(status,TO) && !in_mode(status,LAND)) { return; }
+  vehicle_constraints_s c{}; c.timestamp=sp.timestamp;
+  c.speed_up=param_float("MPC_Z_VEL_MAX_UP"); c.speed_down=param_float("MPC_Z_VEL_MAX_DN");
+  c.want_takeoff=armed && ((PX4_ISFINITE(sp.position[2]) && sp.position[2]<pos.z) || (PX4_ISFINITE(sp.velocity[2]) && sp.velocity[2]<0.f));
+  _constraints_pub.publish(c);
+ }
+ static float param_float(const char *name) { float v=NAN; param_get(param_find(name),&v); return v; }
+ // Which setpoints the module sends in its own mode: the motors directly while the aircraft is on its legs, a position
+ // otherwise. The commander resets a mode to position setpoints whenever it is entered, so this is said again on entry.
+ bool direct_phase() const { return _phase==Prime || _phase==Lift || _phase==LowerNose || _phase==Aborting || _phase==Shutdown || _phase==PilotGround; }
+ void configure_setpoints(const vehicle_status_s &status, hrt_abstime now) {
+  const bool direct=direct_phase();
+  for (auto &m : _own) {
+   if (m.mode_id<0 || status.nav_state!=(uint8_t)m.mode_id) { m.type=0; continue; }
+   const uint16_t type=direct ? setpoint_config_s::TYPE_DIRECT_ACTUATORS : setpoint_config_s::TYPE_TRAJECTORY;
+   if (type!=m.type || now-_setpoint_sent>500_ms) {
+    setpoint_config_s c{}; c.timestamp=now; c.type=type; c.source_id=m.mode_id; c.should_apply=true;
+    _setpoint_config_pub.publish(c); m.type=type; _setpoint_sent=now;
+   }
+  }
+ }
  DEFINE_PARAMETERS(
   (ParamInt<px4::params::NLF_ENABLE>) _enable,
   (ParamInt<px4::params::NLF_MANUAL>) _manual_enable,
@@ -276,6 +408,7 @@ private:
  (ParamFloat<px4::params::NLF_SPOOL_T>) _spool_t,
  (ParamInt<px4::params::NLF_RC_CH>) _rc_ch,
  (ParamInt<px4::params::NLF_RC_LAND>) _rc_land,
+ (ParamInt<px4::params::NLF_MODES>) _modes_param,
   (ParamFloat<px4::params::SENS_BOARD_Y_OFF>) _hover_param,
   (ParamFloat<px4::params::NLF_LAND_ANG>) _land_angle_param,
 
@@ -306,7 +439,7 @@ private:
   // direct control to a full-thrust position landing controller.
   if (_pilot_ground_abort && _phase==LowerNose) { airborne=false; }
   if (status.arming_state != vehicle_status_s::ARMING_STATE_ARMED) { _phase=Failed; return; }
-  if (_pilot_handover && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+  if (_pilot_handover && !owned(status)) {
    // PX4 is flying for the pilot: never request an automatic landing (no position); the floor is gone, the pilot has the throttle
    NL_WARN("pilot has the aircraft"); _phase=Failed; return;
   }
@@ -315,11 +448,12 @@ private:
    command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,_pilot_nav==vehicle_status_s::NAVIGATION_STATE_ALTCTL ? 2.f : 7.f,status);
    NL_WARN("handing PX4 %s the aircraft", pilot_mode_name()); _phase=Failed; return;
   }
-  if (!airborne && status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+  if (!airborne && owned(status)) {
    _phase=Aborting; _phase_start=hrt_absolute_time(); _abort9=_cmd9; _abort10=_cmd10; _abortc=_cmdc;
    return;
   }
   _phase=Failed;
+  if (modes_ready()) { _land_fallback=true; NL_WARN("PX4's own Land takes the landing"); }
   command(vehicle_command_s::VEHICLE_CMD_NAV_LAND,0.f,0.f,status);
  }
  void Run() override {
@@ -357,11 +491,24 @@ private:
   vehicle_land_detected_s land{}; _land_sub.copy(&land);
   const auto now=hrt_absolute_time();
   const bool armed=status.arming_state==vehicle_status_s::ARMING_STATE_ARMED;
+  manage_modes(armed, now);
+  if (status.nav_state!=_last_nav) {
+   // Selecting Takeoff or Land (switch, ground station, failsafe) is the request; the module's own requests for its
+   // mode arrive here too, in a phase that is already under way. The line names the mode for a ground station that
+   // missed the registration (the heartbeat carries only its number).
+   for (const auto &m : _own) {
+    if (m.mode_id>=0 && status.nav_state==(uint8_t)m.mode_id) { NL_INFO("%s (external mode %d)", m.name, int(m.mode_id)-vehicle_status_s::NAVIGATION_STATE_EXTERNAL1+1); }
+   }
+   if (in_mode(status,TO) && (_phase==Idle || _phase==Failed)) { _request.store(true); }
+   if (in_mode(status,LAND) && _phase!=Retake && !_land_fallback) { _land_request.store(true); }
+   _last_nav=status.nav_state;
+  }
+  configure_setpoints(status, now);
   atlas_nose_lift_pilot_s pilot{}; pilot.timestamp=now;
   // Keep throttle ownership through Shutdown/Aborting until disarmed. Otherwise
   // a high stick becomes a Position-mode climb request during the motor ramp-down.
   pilot.active=AtlasPilotGate::owns_throttle(_pilot_mode, _phase!=Idle, armed,
-      status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD || status.nav_state==vehicle_status_s::NAVIGATION_STATE_AUTO_LAND)
+      owned(status) || status.nav_state==vehicle_status_s::NAVIGATION_STATE_AUTO_LAND)
       || (_pilot_handover && armed && (_phase==Prime || _phase==Lift || _phase==PilotGround));   // throttle motion must not trip the stick override
   _pilot_pub.publish(pilot);
   float throttle=0.f;
@@ -373,7 +520,7 @@ private:
    if (_phase>=Prime && _phase<=LowerNose) { fail("module stopped",status,_phase!=Prime && _phase!=Lift); }
    if (_phase!=Aborting && _phase!=Shutdown) { clear_floor(); ScheduleClear(); exit_and_cleanup(desc); return; }
   }
-  if (_phase==Shutdown && (_pilot_handover || _px4_land_takeover) && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+  if (_phase==Shutdown && (_pilot_handover || _px4_land_takeover) && !owned(status)) {
    // Pilot handover or PX4's Land: the nose rests on its feet, PX4 is still in its own mode. Ramp the floor out and disarm.
    if (!armed) { clear_floor(); NL_INFO("landing complete: all motors off and disarmed"); _phase=Idle; _px4_land_takeover=false; return; }
    const float scale=math::constrain(1.f-(now-_phase_start)*1e-6f/2.f,0.f,1.f);
@@ -385,7 +532,7 @@ private:
    return;
   }
   if (_phase==Aborting || _phase==Shutdown) {
-   if (status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+   if (!owned(status)) {
     if (_phase==Shutdown) { if (!armed) { NL_INFO("landing complete: all motors off and disarmed"); } else { NL_WARN("landing interrupted by mode change"); } _phase=Idle; }
     else { _phase=_released ? Idle : Failed; if (_released) { NL_INFO("control handed back to PX4"); } _released=false; }
     return;
@@ -481,6 +628,16 @@ private:
    } else if (_pilot_mode && (_phase==Prime || _phase==Lift || _phase==Spool || _phase==Climb)) {
     if (armed) { pilot_abort(att,pos,now); NL_INFO("pilot requested abort/landing"); }
     else { _phase=Idle; clear_floor(); }
+   } else if (_land_fallback) {
+    NL_WARN("the landing is PX4's");
+   } else if (_phase==Prime) {
+    _phase=Idle; clear_floor(); NL_INFO("takeoff cancelled");
+    if (armed) { command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM,0.f,0.f,status); }
+   } else if (_phase==Lift) {
+    ground_lower(att,pos,now,"landing during the nose lift",false);
+   } else if (_phase==Spool || _phase==Climb) {
+    _phase=Descend; _phase_start=now; _contact_dwell=0; _target_z=pos.z; _x=pos.x; _y=pos.y; clear_floor();
+    NL_INFO("landing: descending onto rear legs");
    } else {
    // from the module's own hover, or from any PX4 hover (e.g. Position mode after the pilot took over); the landing
    // finds the ground by itself, so the takeoff spot and its height do not matter
@@ -493,9 +650,9 @@ private:
     NL_ERR("invalid landing parameters");
    } else if (!PX4_ISFINITE(_disarm_delay.get()) || _disarm_delay.get()<40.f/_down_rate.get()+8.f) {
     NL_ERR("landing needs COM_DISARM_LAND long enough for controlled nose lowering (use 60 s)");
-   } else if (other_hover) {
+   } else if (other_hover || (modes_ready() && !in_mode(status,LAND))) {
     _x=pos.x; _y=pos.y; _yaw=e.psi(); _target_z=pos.z; _phase=Retake; _phase_start=now; _last_command=0; _was_armed=false;
-    NL_INFO("taking the hover over for landing (Offboard)");
+    NL_INFO(modes_ready() ? "taking the hover over for landing (Land)" : "taking the hover over for landing (Offboard)");
    } else {
     _phase=Descend; _phase_start=now; _contact_dwell=0; _target_z=pos.z;
     _x=pos.x; _y=pos.y; clear_floor();
@@ -504,17 +661,16 @@ private:
   }
   }
   if (_phase==Retake) {
-   if (status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+   if (in_flying_mode(status,true)) {
     _was_armed=true; _phase=Descend; _phase_start=now; _contact_dwell=0; _target_z=pos.z; _x=pos.x; _y=pos.y; clear_floor();
     NL_INFO("landing: descending onto rear legs");
    } else if (now-_phase_start>5_s) {
-    NL_ERR("PX4 did not enter Offboard; landing cancelled"); _phase=Idle;
+    NL_ERR(modes_ready() ? "PX4 did not enter Land; landing cancelled" : "PX4 did not enter Offboard; landing cancelled"); _phase=Idle;
    } else if (now-_last_command>500_ms) {
-    command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); _last_command=now;
+    request_flying_mode(status,true); _last_command=now;
    }
   }
-  if (_px4_land_takeover && (!armed || (status.nav_state!=vehicle_status_s::NAVIGATION_STATE_AUTO_LAND
-      && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD))) {
+  if (_px4_land_takeover && (!armed || (status.nav_state!=vehicle_status_s::NAVIGATION_STATE_AUTO_LAND && !owned(status)))) {
    clear_floor(); _px4_land_takeover=false; _phase=Idle;
    if (armed) { NL_WARN("PX4 left Land: the nose is the pilot's again"); } else { NL_INFO("landing complete: disarmed"); }
    return;
@@ -530,6 +686,27 @@ private:
     _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _contact_dwell=0; _touch_z=pos.z; _last_command=0;
     _lower_target=structural_pitch_deg(att);
     NL_INFO("PX4 Land is on the rear feet: the module lowers the nose");
+   }
+  }
+  if ((_phase==Idle || _phase==Failed) && (in_mode(status,TO) || in_mode(status,LAND))) {
+   // In its own mode with nothing to fly (Takeoff selected in the air, a landing given up): PX4 must never be left
+   // without setpoints. In the air the module holds the hover where it is, as PX4's Takeoff holds once it is up (Hold
+   // needs a GPS, and indoors there is none), or sinks while the commander puts its own Land back. On the ground, disarm.
+   if (armed && !land.landed && in_mode(status,LAND) && !_land_fallback) {
+    // Land is selected and the module is not landing (it refused): PX4's own Land takes it
+    _land_fallback=true; NL_WARN("PX4's own Land takes the landing");
+   }
+   if (armed && !land.landed && in_mode(status,TO) && pos.xy_valid && pos.z_valid && PX4_ISFINITE(pos.x) && PX4_ISFINITE(pos.y) && PX4_ISFINITE(pos.z)) {
+    _phase=Hover; _was_armed=true; _x=pos.x; _y=pos.y; _target_z=pos.z; _yaw=matrix::Eulerf(matrix::Quatf(att.q)).psi();
+    _xy_reset=pos.xy_reset_counter; _z_reset=pos.z_reset_counter; _heading_reset=pos.heading_reset_counter;
+    NL_INFO("holding the hover here");
+   } else if (armed && !land.landed) {
+    trajectory_setpoint_s sp{}; sp.timestamp=now;
+    for (int i=0;i<3;i++) { sp.position[i]=NAN; sp.velocity[i]=0.f; sp.acceleration[i]=NAN; sp.jerk[i]=NAN; }
+    if (_land_fallback) { sp.velocity[2]=math::constrain(_land_speed.get(),0.05f,0.3f); }
+    sp.yaw=matrix::Eulerf(matrix::Quatf(att.q)).psi(); sp.yawspeed=0.f; publish_trajectory(sp,status,pos,armed);
+   } else if (armed && now-_last_command>1_s) {
+    command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM,0.f,0.f,status); _last_command=now;
    }
   }
   if (_phase==Idle || _phase==Failed) { return; }
@@ -552,7 +729,7 @@ private:
    if (!PX4_ISFINITE(pos.delta_heading)) { fail("invalid heading reset",status,_phase!=Prime && _phase!=Lift); return; }
    _yaw=matrix::wrap_pi(_yaw+pos.delta_heading); _heading_reset=pos.heading_reset_counter;
   }
-  if (_was_armed && _pilot_handover && armed && status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+  if (_was_armed && _pilot_handover && armed && !owned(status)) {
    // Pilot handover: leaving Offboard is the plan (Pilot, LowerNose and Shutdown run on the floor). If it happens during
    // the nose lift (stick override, mode switch), the direct front-fan hold is gone: lower the nose on the floor instead.
    if (_phase==Prime || _phase==Lift) { ground_lower(att,pos,now,"PX4 left Offboard during the nose lift",true); }
@@ -561,9 +738,9 @@ private:
     NL_INFO("PX4 %s has the aircraft", pilot_mode_name());
    }
    else if (_phase==PilotGround) { ground_lower(att,pos,now,"PX4 left Offboard on the ground",true); }
-  } else if (_was_armed && (!armed || status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD)) {
+  } else if (_was_armed && (!armed || !owned(status))) {
    clear_floor(); _was_armed=false;
-   if (!armed && status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+   if (!armed && owned(status)) {
     // Disarmed while still under direct actuator control (typically the land detector's auto-disarm during a slow
     // nose lift): nobody publishes motor samples any more, the output driver goes quiet and lockstep SITL stops
     // advancing. Keep zero samples flowing and hand the commander back to Hold before going idle.
@@ -618,7 +795,7 @@ private:
     _cmd10=AtlasPilotGate::abort_limit(_cmd10,_pilot_abort_limit10);
     _cmdc=AtlasPilotGate::abort_limit(_cmdc,_pilot_abort_limitc);
    }
-   if (status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+   if (owned(status)) {
     offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
     actuator_motors_s motors{}; motors.timestamp=now; motors.timestamp_sample=att.timestamp;
     for (int i=0;i<12;i++) { motors.control[i]=NAN; }
@@ -675,12 +852,12 @@ private:
    }
    if (now-_start>15_s) { fail("arming timeout",status,false); return; }
    if (now-_start>2_s && now-_last_command>1_s) {
-    if (status.nav_state!=vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
-     command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status);
+    if (!in_flying_mode(status,false)) {
+     request_flying_mode(status,false);
     } else if (!armed) { command(vehicle_command_s::VEHICLE_CMD_COMPONENT_ARM_DISARM,1.f,0.f,status); }
     _last_command=now;
    }
-   if (armed && status.nav_state==vehicle_status_s::NAVIGATION_STATE_OFFBOARD) {
+   if (armed && in_flying_mode(status,false)) {
     _phase=Lift; _phase_start=now; _was_armed=true; NL_INFO("lifting nose");
    }
   }
@@ -881,10 +1058,11 @@ private:
    trajectory_setpoint_s sp{}; sp.timestamp=now;
    sp.position[0]=_x; sp.position[1]=_y; sp.position[2]=_target_z;
    for(int i=0;i<3;i++) { sp.velocity[i]=NAN; sp.acceleration[i]=NAN; sp.jerk[i]=NAN; }
-   sp.yaw=_yaw; sp.yawspeed=0.f; _traj_pub.publish(sp);
+   sp.yaw=_yaw; sp.yawspeed=0.f; publish_trajectory(sp,status,pos,armed);
    if (_phase==Climb && fabsf(pos.z-(_z-_flight_alt))<0.15f && fabsf(pos.vz)<0.15f) {
     _phase=Hover; NL_INFO("hover achieved with heading held");
    }
+
    if (_phase==Climb && now-_phase_start>30_s) { fail("climb timeout",status,true); }
   }
  }

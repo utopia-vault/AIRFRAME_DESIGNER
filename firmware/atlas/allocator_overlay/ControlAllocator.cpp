@@ -334,7 +334,11 @@ ControlAllocator::Run()
 		if (_vehicle_status_sub.update(&vehicle_status)) {
 
 			_armed = vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED;
- _nose_lift_offboard = vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_OFFBOARD;
+ // Offboard, or a mode registered from outside the commander: the nose-lift module flies its own Takeoff and Land
+ // as such modes (NLF_MODES), with the same direct-actuator and floor rules as in Offboard.
+ _nose_lift_offboard = vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_OFFBOARD
+     || (vehicle_status.nav_state >= vehicle_status_s::NAVIGATION_STATE_EXTERNAL1
+         && vehicle_status.nav_state <= vehicle_status_s::NAVIGATION_STATE_EXTERNAL8);
  _nose_lift_pilot = vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_MANUAL
      || vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_STAB
      || vehicle_status.nav_state == vehicle_status_s::NAVIGATION_STATE_ALTCTL

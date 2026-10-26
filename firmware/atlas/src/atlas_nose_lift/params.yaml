@@ -184,6 +184,14 @@ parameters:
       min: -18
       max: 18
       default: 0
+    NLF_MODES:
+      description:
+        short: The nose lift and the nose lowering are PX4's Takeoff and Land
+        long: 1 = the module registers two flight modes with PX4 that replace its own Takeoff and Land, so the flight-mode switch, a ground station, the takeoff command and a failsafe Land all fly the nose lift and the nose lowering. When the module cannot land (an invalid estimate, a failed check) it hands the landing to PX4's own Land within a second. 0 = PX4 keeps its own Takeoff and Land and the module runs only when asked (MAV_CMD_USER_1, NLF_RC_CH, NLF_RC_LAND). Registered while disarmed; on a flight controller only with NLF_HW_OK = 1.
+      type: int32
+      min: 0
+      max: 1
+      default: 1
     NLF_SPOOL_CMD:
       description:
         short: Rear motor command during the handover

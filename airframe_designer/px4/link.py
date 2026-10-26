@@ -19,6 +19,7 @@ import socket
 import struct
 import queue
 import threading
+import re
 import time
 from collections import deque
 from typing import Callable
@@ -31,6 +32,8 @@ from pymavlink.dialects.v20 import common as mavlink  # noqa: E402
 PARAM_TYPE_INT32 = mavlink.MAV_PARAM_TYPE_INT32
 PARAM_TYPE_REAL32 = mavlink.MAV_PARAM_TYPE_REAL32
 
+
+EXTERNAL_MODE_LINE = re.compile(r"^(ATLAS [A-Za-z]+) \(external mode (\d)\)")
 
 def _float_to_int_bits(f: float) -> int:
     return struct.unpack("<i", struct.pack("<f", f))[0]
@@ -73,6 +76,10 @@ class PX4Link:
         self.heartbeat_time = 0.0
         self.armed = False
         self.custom_mode = 0
+        # A mode registered from outside the commander is "Auto, sub-mode 10 + n" in the heartbeat, with no name in it.
+        # The ATLAS module says which is which when it registers ("ATLAS Takeoff (external mode 2) replaces Takeoff") and
+        # again on entering it.
+        self.external_modes: dict[int, str] = {}
         self.mav_type = 0
         self.hil_enabled = False
 
@@ -712,6 +719,9 @@ class PX4Link:
                 text = msg.text if isinstance(msg.text, str) else msg.text.decode(errors="ignore")
                 self.statustext.append((time.time(), msg.severity, text))
                 self.log(f"[px4] {text}")
+                named = EXTERNAL_MODE_LINE.search(text)
+                if named:
+                    self.external_modes[int(named.group(2))] = named.group(1)
             elif t == "BAD_DATA":
                 continue
             # HITL: forward everything the vehicle says to QGC

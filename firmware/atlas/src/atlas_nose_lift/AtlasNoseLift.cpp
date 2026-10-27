@@ -201,6 +201,9 @@ private:
  AtlasGroundModel _ground{};
  float _rest_pitch{}, _lower_target{}, _hover_angle{}, _landing_angle{};
  hrt_abstime _contact_dwell{};
+ // What the range finder read standing on the legs at this takeoff (NAN when unknown): the landing trusts a quick
+ // touchdown only within reach of it.
+ float _park_range{NAN};
  float _touch_z{};
  hrt_abstime _start{}, _phase_start{}, _dwell{}, _last_command{};
  hrt_abstime _fade_start{};
@@ -612,6 +615,7 @@ private:
    }
    _xy_reset=pos.xy_reset_counter; _z_reset=pos.z_reset_counter; _heading_reset=pos.heading_reset_counter;
    _yaw=e.psi(); _x=pos.x; _y=pos.y; _z=pos.z; _target_z=_z; _ground_ref=true;
+   _park_range=(pos.dist_bottom_valid && PX4_ISFINITE(pos.dist_bottom)) ? pos.dist_bottom : NAN;
    NL_INFO("priming nose lift at pitch %.1f",double(math::degrees(_pitch)));
    if (_pilot_mode) { NL_INFO("staged: raise RC throttle slowly; second takeoff press required"); }
    if (_pilot_handover) { NL_INFO("pilot handover (%s): keep the throttle at minimum until 'nose ready'", pilot_mode_name()); }
@@ -762,14 +766,21 @@ private:
   if (_phase==Descend) {
    // Contact inference uses PX4 estimates only and no ground datum, so the ground may differ from the takeoff spot:
    // the rear feet are down when the position controller keeps demanding descent (setpoint well below the vehicle)
-   // while the vehicle has stopped moving vertically, level in roll, for half a second.
+   // while the vehicle has stopped moving vertically, level in roll.
+   // How long that has to last is the slide on the legs: until the module takes the motors, PX4 flies on with the
+   // feet down, cannot roll back to its hover trim, winds up a roll torque that the laterally canted rear jets turn
+   // into a side force, and V4 slid 39 cm sideways in 0.9 s (SITL). With the range finder reading within reach of
+   // what it read on the legs at takeoff, 120 ms is enough; without that, a stall in the air must not look like the
+   // ground, and the contact has to hold for half a second.
    const bool rear_contact=now-_phase_start>2_s && fabsf(pos.vz)<0.055f && _target_z-pos.z>0.12f && fabsf(e.phi())<math::radians(3.f);
+   const bool near_ground=PX4_ISFINITE(_park_range) && pos.dist_bottom_valid && PX4_ISFINITE(pos.dist_bottom)
+       && pos.dist_bottom<_park_range+0.25f;
    if (rear_contact) {
     if (!_contact_dwell) { _contact_dwell=now; }
-    if (now-_contact_dwell>500_ms) {
+    if (now-_contact_dwell>(near_ground ? 120_ms : 500_ms)) {
      _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _touch_z=pos.z;
      _lower_target=math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
-     NL_INFO("landing: rear support detected; lowering nose");
+     NL_INFO(near_ground ? "landing: rear support detected; lowering nose" : "landing: rear support held 0.5 s (no range check); lowering nose");
     }
    } else { _contact_dwell=0; }
    if (now-_phase_start>60_s) { fail("rear contact timeout",status,true); return; }

@@ -1050,14 +1050,25 @@ private:
     if (_fade_start && now-_fade_start>1_s) { _phase=Climb; _phase_start=now; NL_INFO("handover complete"); }
    }
    mode.position=true; _mode_pub.publish(mode);
+   // The climb is a moving target, and PX4 is told how fast it moves. With a position alone its controller aims to stop
+   // on the target: right after liftoff the aircraft caught up with the rising target while still climbing, PX4 cut
+   // the thrust to brake on it and the aircraft sagged 0.3 m (SITL, V4 at 17.8 deg). As in PX4's own takeoff, the
+   // setpoint now carries the target's vertical velocity: 0.5 m/s up, easing to zero at 0.5 m/s^2 over the last
+   // quarter metre. The hover keeps a plain position.
+   float climb_v=0.f;
    if (_phase==Descend) { _target_z=math::min(pos.z+0.5f,_target_z+_land_speed.get()*0.004f); }   // keep descending, at most 0.5 m below the vehicle
    // Request ascent immediately on entering Spool, including while the rear feet touch.
    // Holding measured height here prevents PX4's takeoff ramp from receiving climb demand
    // when the optional rear floor is off. Preserve this trajectory through Spool -> Climb.
-   else if (_phase!=Retake) { _target_z=math::max(_z-_flight_alt,_target_z-0.002f); }
+   else if (_phase!=Retake) {
+    const float left=math::max(_target_z-(_z-_flight_alt),0.f);   // metres still to climb (NED: up is negative)
+    climb_v=math::min(0.5f,sqrtf(2.f*0.5f*left));
+    _target_z=math::max(_z-_flight_alt,_target_z-climb_v*0.004f);
+   }
    trajectory_setpoint_s sp{}; sp.timestamp=now;
    sp.position[0]=_x; sp.position[1]=_y; sp.position[2]=_target_z;
    for(int i=0;i<3;i++) { sp.velocity[i]=NAN; sp.acceleration[i]=NAN; sp.jerk[i]=NAN; }
+   if (climb_v>0.f) { sp.velocity[2]=-climb_v; }
    sp.yaw=_yaw; sp.yawspeed=0.f; publish_trajectory(sp,status,pos,armed);
    if (_phase==Climb && fabsf(pos.z-(_z-_flight_alt))<0.15f && fabsf(pos.vz)<0.15f) {
     _phase=Hover; NL_INFO("hover achieved with heading held");

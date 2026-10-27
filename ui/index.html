@@ -110,6 +110,7 @@
       <button data-tab="airframe" class="active">Geometry</button>
       <button data-tab="px4">PX4</button>
       <button data-tab="sequences">Sequences</button>
+      <button data-tab="module">Custom module</button>
       <button data-tab="live">Live control</button>
     </nav>
     <div class="panel-body">
@@ -467,6 +468,37 @@
 
     </section>
 
+
+    <!-- ============================ CUSTOM MODULE ============================ -->
+    <!-- The ATLAS nose-lift module's settings: the few that shape a flight, then every parameter it has. -->
+    <section id="tab-module" class="tab">
+      <details class="sec" id="sec-nlf-main" open>
+        <summary>Nose lift <span class="sum-spacer"></span><span class="hint" id="nlf-state"></span></summary>
+        <div class="sec-body">
+          <div class="fields cols-4">
+            <label title="NLF_ALT: how high the module climbs above where it took off, in metres">Takeoff height m
+              <input id="nlf-alt" data-param="NLF_ALT" type="number" step="0.1"></label>
+            <label title="NLF_TARGET: the nose-up pitch, on the structural frame, the fans raise the nose to before the aircraft leaves the ground">Nose lift angle°
+              <input id="nlf-target" data-param="NLF_TARGET" type="number" step="1"></label>
+            <label title="NLF_RATE: how fast the nose comes up on the legs, degrees per second (a limit on the demand; short peaks run higher)">Nose up °/s
+              <input id="nlf-rate" data-param="NLF_RATE" type="number" step="0.5"></label>
+            <label title="NLF_DOWN_R: how fast the nose is lowered after the rear feet touch, degrees per second">Nose down °/s
+              <input id="nlf-down" data-param="NLF_DOWN_R" type="number" step="0.5"></label>
+          </div>
+          <div class="fields cols-4">
+            <label title="The pitch the aircraft stands at on its legs, which is also where the nose lowering ends (NLF_LAND_ANG). It is the design's park pitch: typing it re-solves the legs ahead of the CG, as on the Geometry tab.">Park angle°
+              <input id="nlf-park" type="number" step="1" min="-90" max="90"></label>
+            <label title="MPC_THR_HOVER: PX4's hover thrust, the collective it starts from when the module hands the aircraft over after liftoff. Too low and the aircraft sags once the module lets go of the motors, until PX4's integrator catches up (V4 in SITL hovers at a rear-motor command of about 0.70).">Hover thrust
+              <input id="nlf-hover" data-param="MPC_THR_HOVER" type="number" step="0.01"></label>
+          </div>
+          <div class="hint" id="nlf-note"></div>
+        </div>
+      </details>
+      <details class="sec" id="sec-nlf-all" open>
+        <summary>All module parameters</summary>
+        <div class="sec-body"><div id="nlf-table"></div></div>
+      </details>
+    </section>
 
     <!-- ============================ LIVE CONTROL ============================ -->
     <section id="tab-live" class="tab">

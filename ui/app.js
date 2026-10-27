@@ -84,6 +84,7 @@ $$('.tabs button').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.tab === 'airframe') loadExport();
   if (b.dataset.tab === 'px4') { refreshConnection(); ensureParams(); loadExport(); refreshFirmware(); }
   if (b.dataset.tab === 'live') { ensureParams(); renderRcLive(); renderModeButtons(); loadWindModel(); }
+  if (b.dataset.tab === 'module') { renderModuleTab(); ensureParams().then(loadExport).catch(() => { }); }
   if (b.dataset.tab === 'sequences') { refreshBatch(); ensureParams().then(fillTakeoffLanding).catch(() => { }); fillTakeoffLanding(); renderMissions(); pollMission(); }
 }));
 function openTab(name) { $$('.tabs button').find(b => b.dataset.tab === name)?.click(); }
@@ -473,10 +474,10 @@ bindNumber('af-iyy', v => airframe.mass.inertia[1] = v);
 bindNumber('af-izz', v => airframe.mass.inertia[2] = v);
 bindNumber('af-hover', v => airframe.hover_pitch_deg = v);
 // Park pitch: the server re-solves the legs ahead of the CG (the rear feet stay, they are the pivot). Whatever
-// is still waiting to be pushed goes first, so the legs are solved on the design as it is on screen.
-$('#af-landed').addEventListener('change', async (e) => {
-  const pitch = parseFloat(e.target.value);
-  if (!Number.isFinite(pitch)) { e.target.value = airframe.landed_pitch_deg || 0; return; }
+// is still waiting to be pushed goes first, so the legs are solved on the design as it is on screen. The Geometry
+// tab and the Custom module tab both set it here.
+async function setParkPitch(pitch) {
+  if (!Number.isFinite(pitch)) return false;
   try {
     clearTimeout(pushTimer);
     await api('/api/airframe', { airframe, keep_state: true });
@@ -485,11 +486,16 @@ $('#af-landed').addEventListener('change', async (e) => {
     airframe.landed_pitch_deg = res.airframe.landed_pitch_deg;
     airframe.px4_overrides = res.airframe.px4_overrides;
     renderLegTable(); scene.setAirframe(airframe); fillMassCard();
+    $('#af-landed').value = airframe.landed_pitch_deg;
     showProblems(res.problems);
+    return true;
   } catch (err) {
-    e.target.value = airframe.landed_pitch_deg || 0;
     showProblems([`park pitch ${pitch}°: ${err.message}`]);
+    return false;
   }
+}
+$('#af-landed').addEventListener('change', async (e) => {
+  if (!await setParkPitch(parseFloat(e.target.value))) e.target.value = airframe.landed_pitch_deg || 0;
 });
 
 bindNumber('af-bx', v => airframe.body.size[0] = v);
@@ -997,6 +1003,7 @@ async function loadExport() {
   // another browser tab); keep this tab's copy in sync so a geometry edit never pushes a stale set back
   if (airframe && r.overrides) airframe.px4_overrides = r.overrides;
   renderOverrides(r);
+  renderModuleTab();
   $('#px4-export-status').innerHTML = r.problems.length ? `<div class="problems">⚠ ${r.problems.join('<br>⚠ ')}</div>` : '';
 }
 let lastExport = null;
@@ -1388,6 +1395,140 @@ $$('#tl-alt, #tl-climb, #tl-nose, #tl-descend, #tl-disarm').forEach(inp => inp.a
   } catch (err) { logLine('[flight] ' + err.message); }
   renderOverrides();
 }));
+
+// ============================================================ custom module
+// The ATLAS nose-lift module's settings in one place: the few that shape a flight, then every parameter the module
+// has, grouped by what it is for. A value typed here is an override kept with the design (Update PX4 writes it, as
+// for any parameter); with the vehicle connected and disarmed it is also written to the vehicle at once and saved to
+// its flash. What is shown is what Update PX4 would write: the override, or what the design works out, or the
+// firmware's default.
+const NLF_GROUPS = [
+  ['Takeoff', ['NLF_ALT', 'NLF_TARGET', 'NLF_RATE', 'NLF_RAMP', 'NLF_DWELL', 'NLF_TIMEOUT', 'NLF_SPOOL_CMD', 'NLF_SPOOL_T']],
+  ['Landing', ['NLF_DOWN_R', 'NLF_LAND_ANG', 'NLF_LAND_V']],
+  ['Switches and triggers', ['NLF_ENABLE', 'NLF_MODES', 'NLF_HW_OK', 'NLF_RC_CH', 'NLF_RC_LAND']],
+  ['Other ways to take off', ['NLF_PILOT', 'NLF_LMAX', 'NLF_RC_THR', 'NLF_MANUAL', 'NLF_M_HOV']],
+  // PX4's own parameters that decide how the module's takeoff ends: listed here so they sit beside the module's
+  ['PX4 parameters the takeoff depends on', ['MPC_THR_HOVER']],
+  ['Worked out from the geometry', ['NLF_CFG_OK', 'NLF_MASS', 'NLF_GX', 'NLF_GZ', 'NLF_MOM', 'NLF_W9', 'NLF_WC', 'NLF_FA', 'NLF_FB', 'NLF_FC',
+                                    'NLF_UF', 'NLF_U1', 'NLF_U2', 'NLF_U3', 'NLF_U4', 'NLF_U5', 'NLF_U6', 'NLF_U7', 'NLF_U8']],
+];
+function moduleParamNames() {
+  const px4 = new Set(NLF_GROUPS.flatMap(([, names]) => names).filter(k => !k.startsWith('NLF_')));
+  const have = new Set([...Object.keys(meta), ...Object.keys(lastExport?.params || {}), ...Object.keys(params)].filter(k => k.startsWith('NLF_') || px4.has(k)));
+  const listed = new Set(NLF_GROUPS.flatMap(([, names]) => names));
+  const groups = NLF_GROUPS.map(([title, names]) => [title, names.filter(k => have.has(k))]);
+  const rest = [...have].filter(k => !listed.has(k)).sort();
+  if (rest.length) groups.push(['Other', rest]);
+  return groups.filter(([, names]) => names.length);
+}
+function moduleValue(k) {
+  const ov = airframe?.px4_overrides || {};
+  if (k in ov) return ov[k];
+  const P = lastExport?.params || {};
+  if (k in P) return P[k];
+  return params[k]?.value ?? meta[k]?.default ?? '';
+}
+function moduleEnumOptions(k) {
+  const v = meta[k]?.values;
+  if (!v) return null;
+  return Array.isArray(v) ? v.map(o => [o.value, o.description]) : Object.entries(v).map(([val, d]) => [+val, d]);
+}
+async function setModuleParam(name, value) {
+  const m = meta[name] || {};
+  if (m.min != null && value < m.min || m.max != null && value > m.max) {
+    logLine(`[module] ${name} = ${value} is outside ${m.min ?? '…'} to ${m.max ?? '…'}; not set`);
+    renderModuleTab(); return;
+  }
+  try {
+    await api('/api/airframe/override', { name, value });
+    airframe.px4_overrides[name] = value;
+    let where = 'kept with the design; Update PX4 writes it';
+    if (status.ctl_connected && !status.armed) {
+      try {
+        const r = await api('/api/params/set_many', { params: { [name]: value } });
+        where = r.ok ? 'written to the vehicle and kept with the design' : 'kept with the design; the vehicle did not take it';
+        if (r.ok) params[name] = { ...(params[name] || {}), value };
+      } catch (e) { where = 'kept with the design; not written to the vehicle (' + e.message + ')'; }
+    }
+    markDirty();
+    logLine(`[module] ${name} = ${value}: ${where}`);
+  } catch (err) { logLine('[module] ' + name + ': ' + err.message); }
+  await loadExport();
+}
+function renderModuleTab() {
+  if (!airframe || !$('#tab-module')) return;
+  const f = (x) => (typeof x === 'number' && !Number.isInteger(x)) ? +x.toFixed(4) : x;
+  const armed = !!status.armed;
+  // the four that shape a flight, and the park angle
+  $$('#sec-nlf-main input[data-param]').forEach(inp => {
+    const m = meta[inp.dataset.param] || {};
+    if (m.min != null) inp.min = m.min;
+    if (m.max != null) inp.max = m.max;
+    if (document.activeElement !== inp) inp.value = nf(+moduleValue(inp.dataset.param), 3);
+    inp.disabled = armed;
+  });
+  const park = $('#nlf-park');
+  if (document.activeElement !== park) park.value = nf(+(airframe.landed_pitch_deg ?? 0), 2);
+  park.disabled = armed;
+  const enabled = +moduleValue('NLF_ENABLE') === 1;
+  const off = new Set(lastExport?.modules_off || []);
+  $('#nlf-state').textContent = off.has('NLF_ENABLE') ? 'switched off for this design' : enabled ? 'enabled' : 'NLF_ENABLE = 0';
+  $('#nlf-note').textContent = armed ? 'Not while armed.'
+    : status.ctl_connected ? 'A value you change is written to the vehicle now and kept with the design.'
+      : 'No vehicle connected: a value you change is kept with the design, and Update PX4 writes it.';
+  // every parameter of the module
+  const ov = airframe.px4_overrides || {};
+  const geo = lastExport?.geometry || {};
+  const cur = (k) => params[k]?.value;
+  const same = (a, b) => a != null && b != null && b !== '' && Math.abs(+a - +b) < 1e-4;
+  // narrow enough for the side panel: name, value, the vehicle's value and the reset on one line; what it is, the
+  // default and the range under it
+  const head = `<div class="nlf-row head"><span>Parameter</span><span>Value</span><span>Vehicle</span><span></span></div>`;
+  let html = '';
+  for (const [title, names] of moduleParamNames()) {
+    html += (html ? '<div class="ov-sep"></div>' : '') + `<div class="hint" style="margin:2px 0 4px">${esc(title)}</div>` + head;
+    for (const k of names) {
+      const m = meta[k] || {};
+      const v = moduleValue(k);
+      const opts = moduleEnumOptions(k);
+      const input = opts
+        ? `<select data-nlf="${k}"${armed ? ' disabled' : ''}>${opts.map(([val, d]) => `<option value="${val}"${+val === +v ? ' selected' : ''}>${val}: ${esc(d)}</option>`).join('')}</select>`
+        : `<input type="number" step="any" value="${esc(f(v === '' ? '' : +v))}" data-nlf="${k}"${armed ? ' disabled' : ''}>`;
+      const c = cur(k);
+      const veh = `<span class="ov-cur ${c == null ? 'muted' : same(c, v) ? 'ok' : 'warn'}" title="the value the vehicle has right now">${c == null ? '—' : f(c)}</span>`;
+      const fromGeo = k in geo;
+      const back = k in ov
+        ? `<button class="del" data-nlf-reset="${k}" title="${fromGeo ? `back to what the geometry works out (${f(geo[k])})` : 'forget this value: the firmware default applies'}">↺</button>`
+        : '<span></span>';
+      const d = m.default;
+      const extra = [d == null ? '' : `default ${f(+d)}`,
+                     (m.min != null || m.max != null) ? `${m.min ?? ''}…${m.max ?? ''}` : '',
+                     m.unit || ''].filter(Boolean).join(' · ');
+      html += `<div class="nlf-row${k in ov ? ' edited' : ''}"><span class="pname">${k}</span>${input}${veh}${back}`
+        + `<span class="nlf-desc" title="${esc(m.long || '')}">${esc(m.short || '')}${extra ? ` <span class="muted">(${esc(extra)})</span>` : ''}</span></div>`;
+    }
+  }
+  $('#nlf-table').innerHTML = html || '<div class="hint">No nose-lift parameters known yet: connect to PX4 or open the PX4 tab once.</div>';
+  $$('#nlf-table [data-nlf]').forEach(el => el.addEventListener('change', () => {
+    const value = parseFloat(el.value);
+    if (Number.isFinite(value)) setModuleParam(el.dataset.nlf, value);
+  }));
+  $$('#nlf-table [data-nlf-reset]').forEach(b => b.addEventListener('click', async () => {
+    const n = b.dataset.nlfReset;
+    await api('/api/airframe/override_remove', { name: n });
+    delete airframe.px4_overrides[n];
+    logLine(`[module] ${n}: back to ${n in geo ? 'what the geometry works out' : "the firmware's default"}; Update PX4 writes it`);
+    markDirty(); loadExport();
+  }));
+}
+$$('#sec-nlf-main input[data-param]').forEach(inp => inp.addEventListener('change', () => {
+  const value = parseFloat(inp.value);
+  if (Number.isFinite(value)) setModuleParam(inp.dataset.param, value); else renderModuleTab();
+}));
+$('#nlf-park').addEventListener('change', async (e) => {
+  await setParkPitch(parseFloat(e.target.value));
+  await loadExport();
+});
 
 // Arm and Takeoff lost their handlers when the Flight tab went: the footer kept labelling and enabling two
 // buttons that did nothing at all when pressed.

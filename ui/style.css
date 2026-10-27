@@ -360,6 +360,16 @@ button.pill.armed:hover { filter: brightness(0.92); background: var(--red); colo
 /* the grouped rows carry one summary instead of a value and a default, so they keep five columns */
 .ov-row.ro.rotor, .ov-row.ro.funcs { grid-template-columns: 110px 1fr 70px 60px 22px; }
 .ov-sep { height: 1px; background: var(--line); margin: 8px 0; }
+/* Custom module tab: one parameter per row, narrow enough for the side panel; what it is goes on a second line */
+.nlf-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 58px 22px; gap: 6px 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.nlf-row.head { color: var(--text-3); font-size: 11px; padding-bottom: 2px; }
+.nlf-row.head span:nth-child(3) { text-align: right; }
+.nlf-row:last-child { border-bottom: 0; }
+.nlf-row .pname { font-family: var(--mono); font-size: 12px; }
+.nlf-row.edited .pname { color: var(--accent); }
+.nlf-row input, .nlf-row select { padding: 3px 6px; font-size: 12px; min-width: 0; }
+.nlf-row .ov-cur { font-variant-numeric: tabular-nums; text-align: right; }
+.nlf-row .nlf-desc { grid-column: 1 / -1; color: var(--text-2); font-size: 11.5px; line-height: 1.35; }
 #param-list { max-height: 360px; overflow-y: auto; }
 
 /* USB joystick */

@@ -137,6 +137,15 @@
         "5"
       ],
       "port": 8095
+    },
+    {
+      "name": "airframe-designer-board",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "PATH=$HOME/.venvs/px4-build/bin:$PATH PX4_SOURCE_DIR=$HOME/PX4-Autopilot-atlas exec .venv/bin/python -m airframe_designer ui --http 127.0.0.1:8081 --px4-instance 1 --no-browser --mode auto"
+      ],
+      "port": 8081
     }
   ]
 }

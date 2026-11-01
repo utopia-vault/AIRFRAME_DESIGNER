@@ -40,7 +40,7 @@ link=PX4Link('sitl',inst.tcp_address,ctl_address=inst.ctl_address,log=log)
 rows=[]; started=False; requested=False; land_sent=False; started_t=0; inspected=False
 try:
  link.open()
- sim=Simulator(af,link,sensor_rate=250,physics_substeps=4,speed=0,lockstep=True,log=log,seed=seed,physics=physics)
+ sim=Simulator(af,link,sensor_rate=250,physics_substeps=4,speed=0,lockstep=True,log=log,seed=seed)   # JSBSim is the only engine; argv[3] is kept as a label
  def cli(module,*args):
   r=subprocess.run([str(bin/f'px4-{module}'),'--instance',str(instance),*args],capture_output=True,text=True,timeout=5)
   print(r.stdout,r.stderr,flush=True)

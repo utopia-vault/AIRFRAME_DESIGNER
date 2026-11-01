@@ -18,6 +18,7 @@
 #include <uORB/topics/trajectory_setpoint.h>
 #include <px4_platform_common/atomic.h>   // NuttX has no std::atomic; px4::atomic works on SITL and boards
 #include "Model.hpp"
+#include "GroundFilter.hpp"
 #include "PilotGate.hpp"
 #include "PilotHandover.hpp"
 #include "RcTrigger.hpp"
@@ -210,6 +211,8 @@ private:
  hrt_abstime _support_since{};   // Spool: when PX4's own allocation first matched the floor (must persist before fading)
  float _fade9{}, _fade10{}, _fadec{}, _abort9{}, _abort10{}, _abortc{};
  float _integral{}, _cmd9{}, _cmd10{}, _cmdc{};
+ AtlasGroundFilter _lift_rates;     // structural pitch and yaw rate the lift loop and its settle test act on
+ AtlasFrontAverage _front_avg;      // what the front fans pushed lately: a ground abort ramps out from this
  hrt_abstime _diagnostic_time{};
  uint8_t _xy_reset{}, _z_reset{}, _heading_reset{};
  float _pitch{}, _yaw{}, _x{}, _y{}, _z{}, _target_z{};
@@ -452,7 +455,13 @@ private:
    NL_WARN("handing PX4 %s the aircraft", pilot_mode_name()); _phase=Failed; return;
   }
   if (!airborne && owned(status)) {
+   const bool lifting=(_phase==Lift || _phase==Spool) && _front_avg.primed;
    _phase=Aborting; _phase_start=hrt_absolute_time(); _abort9=_cmd9; _abort10=_cmd10; _abortc=_cmdc;
+   if (lifting) {
+    // Ramp out from what held the nose, never from the last command: that can be the top of a pulse (GroundFilter.hpp),
+    // or the bottom of one, which would drop the nose onto its feet with nothing under it.
+    _abort9=to_cmd(_front_avg.a); _abort10=to_cmd(_front_avg.b); _abortc=_ground.fc ? to_cmd(_front_avg.c) : 0.f;
+   }
    return;
   }
   _phase=Failed;
@@ -869,7 +878,7 @@ private:
     _last_command=now;
    }
    if (armed && in_flying_mode(status,false)) {
-    _phase=Lift; _phase_start=now; _was_armed=true; NL_INFO("lifting nose");
+    _phase=Lift; _phase_start=now; _was_armed=true; _lift_rates.reset(); _front_avg.reset(); NL_INFO("lifting nose");
    }
   }
   // In staged handoff retain the actual settled fan commands; do not remove
@@ -880,7 +889,8 @@ private:
    const matrix::Dcmf structural = matrix::Dcmf(matrix::Quatf(att.q)) * matrix::Dcmf(matrix::Eulerf(0.f, math::radians(_hover_angle), 0.f));
    const float theta = matrix::Eulerf(structural).theta();
    const matrix::Vector3f omega = matrix::Dcmf(matrix::Eulerf(0.f, math::radians(-_hover_angle), 0.f)) * matrix::Vector3f(rates.xyz);
-   const float q = math::degrees(omega(1));
+   _lift_rates.update(math::degrees(omega(1)), math::degrees(omega(2)));
+   const float q = _lift_rates.q;
    const float ease = _phase==Lift ? math::constrain(elapsed / _ramp.get(), 0.f, 1.f) : 1.f;
    // Pilot handover: the nose goes all the way to PX4's level, so the attitude loop has nothing to fight when it
    // takes the sticks at low collective (a saturated pitch demand there drives rear motors up and tips the aircraft).
@@ -890,9 +900,14 @@ private:
    if (!(_pilot_mode && _phase==Lift && math::max(_cmd9,_cmd10)>=_pilot_cap-.001f && error>0.f)) { _integral=math::constrain(_integral+error*0.004f,-40.f,40.f); }
    // Feedforward from the exported current mass, rear pivot and front fan moments.
    const float ff = _ground.mass*9.80665f*(_ground.gx*cosf(theta)+_ground.gz*sinf(theta))/_ground.moment;
-   const float frac=math::constrain(ease*ff+0.02f*error+0.012f*_integral,0.f,1.f);
-   const float delta=math::constrain(-3.f*omega(2),-0.25f,0.25f);
+   // Half the rate gain the lowering uses: at 0.02 the fans hunted at 6 Hz on the aircraft (see GroundFilter.hpp).
+   const float frac=math::constrain(ease*ff+0.01f*error+0.012f*_integral,0.f,1.f);
+   const float delta=math::constrain(-3.f*math::radians(_lift_rates.r),-0.25f,0.25f);
+   const float was9=_cmd9, was10=_cmd10, wasc=_cmdc;
    front_split(frac,delta);
+   // Smooth power, not surges: each fan rises at most 0.4 per second and falls at most 2 (GroundFilter.hpp). Before
+   // the pilot cap, which must still bound the result.
+   _cmd9=AtlasFrontSlew::step(was9,_cmd9); _cmd10=AtlasFrontSlew::step(was10,_cmd10); _cmdc=AtlasFrontSlew::step(wasc,_cmdc);
    if (_pilot_mode && _phase==Lift) {
     // During the low-stick confirmation interval keep support instead of
     // dropping power to zero before the controlled-abort path has taken over.
@@ -903,13 +918,15 @@ private:
     const float scale=largest>_pilot_cap && largest>0.f ? _pilot_cap/largest : 1.f;
     _cmd9*=scale; _cmd10*=scale; _cmdc*=scale;
    }
+   _front_avg.update(to_thrust(_cmd9),to_thrust(_cmd10),_ground.fc ? to_thrust(_cmdc) : 0.f);
    if (_phase==Lift && elapsed>(_pilot_mode ? 55.f : _timeout.get())) {
     if (_pilot_mode) { NL_WARN("staged ground wait timed out: lowering with existing power limit"); pilot_abort(att,pos,now); return; }
     fail("lift timeout",status,_z-pos.z>0.3f); return;
    }
    if (_phase==Lift && _z-pos.z>0.35f && fabsf(_pitch)>math::radians(3.f)) { fail("early liftoff",status,true); return; }
-   if (_phase==Lift && land.landed && fabsf(math::degrees(theta)-lift_target)<2.f && fabsf(rates.xyz[1])<math::radians(3.f)
-       && fabsf(e.phi())<math::radians(3.f) && fabsf(rates.xyz[2])<math::radians(3.f)) {
+   // Still means the filtered rates: the raw pitch rate carries the fans' own wobble, which never stops for 0.5 s.
+   if (_phase==Lift && land.landed && fabsf(math::degrees(theta)-lift_target)<2.f && fabsf(_lift_rates.q)<AtlasGroundFilter::kSettleRate
+       && fabsf(e.phi())<math::radians(3.f) && fabsf(_lift_rates.r)<3.f) {
     if (!_dwell) { _dwell=now; }
     if ((now-_dwell)*1e-6f>=_hold.get()) {
      if (_pilot_mode && !_ready_announced) { NL_INFO("nose ready: press Takeoff again for 1 m hover; lower throttle to abort"); _ready_announced=true; }

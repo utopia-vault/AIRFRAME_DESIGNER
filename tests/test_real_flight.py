@@ -178,6 +178,54 @@ def test_the_radio_talking_about_itself_is_not_the_aircraft():
     assert link.status()["radio"]["age"] < 1
 
 
+def test_a_restart_is_read_off_the_aircraft_clock():
+    """A Pixhawk power-cycled on a radio was back before the link was ever called down, so nothing knew it had
+    restarted - and PX4's default streams, which carry no optical flow, quietly replaced the ones asked for."""
+    from airframe_designer.px4.link import PX4Link
+    link = PX4Link("hitl", "/dev/null", baud=57600, log=lambda *_: None)
+    msg = lambda ms, comp=1: SimpleNamespace(time_boot_ms=ms, get_srcComponent=lambda: comp)   # noqa: E731
+    for ms in (300_000, 300_040, 300_020, 0, 301_000):
+        link._note_boot_clock(msg(ms))
+    assert link.boots == 0, "a few milliseconds out of order, or a field PX4 left at 0, is not a restart"
+    link._note_boot_clock(msg(4_000, comp=68))
+    assert link.boots == 0, "only the autopilot's clock counts"
+    link._note_boot_clock(msg(4_000))
+    assert link.boots == 1
+    link._note_boot_clock(msg(4_050))
+    assert link.boots == 1
+
+
+def test_a_restart_with_no_silence_still_asks_for_the_streams_again():
+    import threading
+    from airframe_designer.px4.connection import ConnectionManager
+    link = SimpleNamespace(ctl_connected=True, ctl_rx_time=time.time() + 3600, boots=0, mode="hitl",
+                           listening=True, params={}, param_count=0, link_budget_bps=lambda: 2592.0,
+                           request_autopilot_version=Mock(), get_param=Mock(), request_flight_telemetry=Mock(),
+                           trim_telemetry=Mock(), fetch_all_params=Mock())
+    conn = ConnectionManager.__new__(ConnectionManager)
+    conn.link, conn.mode, conn.log, conn.on_params = link, "hitl", lambda *_: None, None
+    conn._stop, conn._params_session, conn.native_module_seen = threading.Event(), 0, False
+    conn.ensure_native_module = conn._module_present = lambda: False
+    watcher = threading.Thread(target=conn._watch, daemon=True)
+    watcher.start()
+
+    def asked(n):
+        deadline = time.time() + 10
+        while link.request_flight_telemetry.call_count < n and time.time() < deadline:
+            time.sleep(0.05)
+        return link.request_flight_telemetry.call_count
+
+    try:
+        assert asked(1) == 1, "the link coming up asks for the streams"
+        time.sleep(1.0)
+        assert link.request_flight_telemetry.call_count == 1, "and a link that stays up is not asked twice"
+        link.boots += 1                       # the aircraft restarted between two messages
+        assert asked(2) == 2, "a restart puts PX4 back on its default streams, so they are asked for again"
+    finally:
+        conn._stop.set()
+        watcher.join(timeout=5)
+
+
 def test_real_flight_wiring_follows_the_motor_count():
     """It was pinned to ATLAS's ten, so a nine-rotor design could not even be looked at in real-flight
     mode: /api/px4/export went through here on every poll and raised."""

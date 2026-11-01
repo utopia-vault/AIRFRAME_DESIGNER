@@ -124,6 +124,8 @@ class PX4Link:
         self._qgc_addr = None
         self._readers: list[threading.Thread] = []
         self.ctl_rx_time = 0.0
+        self.boots = 0                       # restarts seen on the aircraft's own clock (see _note_boot_clock)
+        self._boot_ms: int | None = None
 
     # ----------------------------------------------------------------- lifecycle
     def open(self) -> None:
@@ -443,6 +445,26 @@ class PX4Link:
         return True
 
 
+    def _note_boot_clock(self, msg) -> None:
+        """Count a restart of the aircraft by its own clock going backwards.
+
+        Silence is not enough to see one. A Pixhawk is back on a radio in about as long as the watcher waits
+        before calling the link down, so a power cycle could pass unnoticed - and with it every stream this
+        app had asked for, since a reboot puts PX4 back on its default rates and those carry no optical
+        flow. time_boot_ms starts from zero on every boot whatever the link did in between. Only the
+        autopilot's clock counts, and it has to fall by seconds: streams sampled a moment apart arrive a
+        few milliseconds out of order, and a field PX4 has not filled reads 0.
+        """
+        boot_ms = getattr(msg, "time_boot_ms", None)
+        if not boot_ms or msg.get_srcComponent() != 1:
+            return
+        boot_ms = int(boot_ms)
+        if self._boot_ms is not None and boot_ms + 2000 < self._boot_ms:
+            self.boots += 1
+            self.log(f"[link] the aircraft restarted: its clock went back from {self._boot_ms / 1000:.0f} s "
+                     f"to {boot_ms / 1000:.0f} s")
+        self._boot_ms = boot_ms
+
     @property
     def listening(self) -> bool:
         """True when a board is flying on its own sensors and this app is only watching it.
@@ -606,6 +628,7 @@ class PX4Link:
                                                      if getattr(self, "paused_hint", lambda: False)() else ""))
                 if is_ctl and self.ctl_connected and time.time() - self.ctl_rx_time > 5.0:
                     self.ctl_connected = False
+                    self._boot_ms = None         # the reconnect already says it; the clock need not say it again
                     self.log(f"[link] {name} lost")
                 continue
             self.rx_count += 1
@@ -628,6 +651,7 @@ class PX4Link:
                     self.ctl_connected = True
                     self.target_system = msg.get_srcSystem()
                     self.log(f"[link] PX4 {name} up (sysid {msg.get_srcSystem()} compid {msg.get_srcComponent()})")
+                self._note_boot_clock(msg)
             if t == "HIL_ACTUATOR_CONTROLS":
                 with self._act_cond:
                     self.actuators = list(msg.controls)

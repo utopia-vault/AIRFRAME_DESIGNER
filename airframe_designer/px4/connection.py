@@ -1259,17 +1259,23 @@ class ConnectionManager:
 
     # ------------------------------------------------------------ watcher
     def _watch(self) -> None:
-        """Re-download parameters whenever the control link (re)connects, e.g. after a reboot."""
+        """Re-download parameters whenever the control link (re)connects, e.g. after a reboot.
+
+        A reboot is also the aircraft's clock starting again (`link.boots`): over a radio a power cycle can
+        be shorter than the silence that marks the link down, and the streams asked for before it are gone."""
         fetched_for = -1
         was_up = False
+        seen_link, seen_boots = None, 0
         while not self._stop.is_set():
             time.sleep(0.5)
             link = self.link
             if link is None:
                 was_up = False
                 continue
+            if link is not seen_link:
+                seen_link, seen_boots = link, link.boots
             up = link.ctl_connected and (time.time() - link.ctl_rx_time < 3.0)
-            if up and not was_up:
+            if up and (not was_up or link.boots != seen_boots):
                 self._params_session += 1
             if up and fetched_for != self._params_session:
                 fetched_for = self._params_session
@@ -1324,3 +1330,4 @@ class ConnectionManager:
                     continue
                 # no automatic estimator restart: with a board connected the app never nudges the flight controller
             was_up = up
+            seen_boots = link.boots          # a restart counted while that pass ran is the one it just served

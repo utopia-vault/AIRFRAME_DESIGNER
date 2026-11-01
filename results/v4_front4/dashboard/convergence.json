@@ -1,0 +1,56 @@
+[
+ {
+  "round": 0,
+  "feasible": 2998,
+  "n": 3000,
+  "roll": 11.57,
+  "pitch": 12.1,
+  "yaw": 9.88,
+  "weakest": 9.88
+ },
+ {
+  "round": 1,
+  "feasible": 2995,
+  "n": 3000,
+  "roll": 11.57,
+  "pitch": 12.1,
+  "yaw": 9.88,
+  "weakest": 9.88
+ },
+ {
+  "round": 2,
+  "feasible": 2984,
+  "n": 3000,
+  "roll": 12.35,
+  "pitch": 10.42,
+  "yaw": 10.34,
+  "weakest": 10.34
+ },
+ {
+  "round": 3,
+  "feasible": 3000,
+  "n": 3000,
+  "roll": 12.35,
+  "pitch": 10.42,
+  "yaw": 10.34,
+  "weakest": 10.34
+ },
+ {
+  "round": 4,
+  "feasible": 3000,
+  "n": 3000,
+  "roll": 12.35,
+  "pitch": 10.42,
+  "yaw": 10.34,
+  "weakest": 10.34
+ },
+ {
+  "round": 5,
+  "feasible": 3000,
+  "n": 3000,
+  "roll": 12.35,
+  "pitch": 10.42,
+  "yaw": 10.34,
+  "weakest": 10.34
+ }
+]

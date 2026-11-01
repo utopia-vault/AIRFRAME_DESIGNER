@@ -1,0 +1,616 @@
+<style>
+.fa{display:flex;flex-direction:column;gap:var(--cds-gap-xl);font-family:var(--font-anthropic-sans);font-variant-numeric:tabular-nums}
+.fa h1{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:0;text-wrap:balance}
+.fa h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0;text-wrap:balance}
+.fa h3{font-size:var(--cds-font-size-body);font-weight:var(--cds-font-weight-medium);margin:0}
+.fa p{margin:0}
+.fa .head{display:flex;flex-direction:column;gap:var(--cds-gap-sm)}
+.fa .take{color:var(--color-fg-muted);font-size:var(--cds-font-size-body);max-width:72ch;line-height:1.5}
+.fa .take b,.fa .sub b{font-weight:var(--cds-font-weight-medium);color:var(--color-fg)}
+.fa .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr));gap:var(--cds-gap-md)}
+.fa .tile,.fa .card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-lg);display:flex;flex-direction:column;gap:var(--cds-gap-sm);min-width:0;position:relative}
+.fa .lab{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.fa .big{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);line-height:1.1}
+.fa .unit{font-size:var(--cds-font-size-body);color:var(--color-fg-muted);margin-left:var(--cds-gap-xs)}
+.fa .sub{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);line-height:1.45}
+.fa .sec{display:flex;flex-direction:column;gap:var(--cds-gap-md)}
+.fa .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr));gap:var(--cds-gap-md)}
+.fa .note{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);line-height:1.45;max-width:80ch}
+.fa .ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:var(--cds-gap-md)}
+.fa fieldset{border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:var(--cds-pad-md);margin:0;display:flex;flex-direction:column;gap:var(--cds-gap-sm);min-width:0}
+.fa legend{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);padding:0 var(--cds-pad-xs)}
+.fa .sl{display:grid;grid-template-columns:3.2rem 1fr 3.4rem;align-items:center;gap:var(--cds-gap-sm);font-size:var(--cds-font-size-caption)}
+.fa .sl input{width:100%;accent-color:currentColor;color:var(--color-fg)}
+.fa .sl output{text-align:right;font-size:var(--cds-font-size-body)}
+.fa .presets{display:flex;flex-wrap:wrap;gap:var(--cds-gap-xs);align-items:center}
+.fa button.pre{font:inherit;font-size:var(--cds-font-size-caption);background:transparent;color:var(--color-fg);border:1px solid var(--color-border-line);border-radius:999px;padding:var(--cds-pad-xs) var(--cds-pad-sm);cursor:pointer}
+.fa button.pre:hover{border-color:var(--color-fg-muted)}
+.fa button.pre[aria-pressed="true"]{background:var(--color-fg);color:var(--color-bg);border-color:var(--color-fg)}
+.fa button:focus-visible,.fa input:focus-visible,.fa select:focus-visible,.fa tr:focus-visible{outline:2px solid var(--color-fg);outline-offset:2px}
+.fa .readout{display:flex;flex-wrap:wrap;gap:var(--cds-gap-md) var(--cds-gap-lg);align-items:baseline}
+.fa .ro{display:flex;flex-direction:column;gap:2px}
+.fa .ro .v{font-family:var(--font-anthropic-serif);font-size:var(--cds-font-size-heading)}
+.fa .chip{font-size:var(--cds-font-size-caption);border-radius:999px;padding:2px var(--cds-pad-sm);border:1px solid currentColor;align-self:center}
+.fa .chip.ok{color:var(--color-ok)} .fa .chip.bad{color:var(--color-bad)}
+.fa .chart{width:100%;min-height:12rem}
+.fa .chart svg{display:block;overflow:visible}
+.fa .chart text{fill:var(--color-fg-muted);font-size:11px;font-family:var(--font-anthropic-sans)}
+.fa .chart .strong{fill:var(--color-fg)}
+.fa .row{display:flex;flex-wrap:wrap;gap:var(--cds-gap-sm);align-items:center;justify-content:space-between}
+.fa select{font:inherit;font-size:var(--cds-font-size-caption);color:var(--color-fg);background:var(--color-bg);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:2px var(--cds-pad-xs)}
+.fa .tbl{overflow-x:auto}
+.fa table{border-collapse:collapse;width:100%;font-size:var(--cds-font-size-caption)}
+.fa th,.fa td{text-align:right;padding:var(--cds-pad-xs) var(--cds-pad-sm);border-bottom:1px solid var(--color-border-line);white-space:nowrap}
+.fa th:first-child,.fa td:first-child{text-align:left}
+.fa th{color:var(--color-fg-muted);font-weight:400}
+.fa td.txt{text-align:left;white-space:normal;min-width:10rem}
+.fa tr.pick{cursor:pointer} .fa tr.pick:hover td{background:var(--cds-chart-grid)}
+.fa tr.on td{font-weight:var(--cds-font-weight-medium)}
+.fa .grp{color:var(--color-fg-muted)}
+.fa .fa-tip{position:absolute;pointer-events:none;background:var(--cds-surface-popover);border:1px solid var(--cds-border);border-radius:var(--cds-radius);box-shadow:var(--cds-shadow-popover);padding:var(--cds-pad-xs) var(--cds-pad-sm);font-size:var(--cds-font-size-caption);z-index:5;white-space:nowrap}
+.fa .fa-tip .t{color:var(--cds-text-secondary)}
+.fa .key{display:flex;flex-wrap:wrap;gap:var(--cds-gap-md);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.fa .key i{display:inline-block;width:.7rem;height:.7rem;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.fa [data-dash-source-state=empty]{color:transparent}
+.fa [data-dash-source-state=refreshing]{opacity:.5;transition:opacity var(--cds-dur-slow)}
+@media (max-width:40rem){.fa .hide-n{display:none}}
+</style>
+
+<div class="fa">
+  <header class="head" id="top">
+    <h1>V4 front motor authority</h1>
+    <p class="take" id="takeaway">Four front motors as drawn in Fusion give yaw <b><span data-source="options" data-field="yaw" data-where="id=as_drawn" class="dash-skeleton">—</span></b> rad/s². Option C (outer pair leaning in harder and tipped forward, vertical pair leaning out) gives <b><span data-source="options" data-field="yaw" data-where="id=C_buildable" class="dash-skeleton">—</span></b> rad/s² of yaw and <b><span data-source="options" data-field="roll" data-where="id=C_buildable" class="dash-skeleton">—</span></b> of roll, and keeps pitch at <b><span data-source="options" data-field="pitch" data-where="id=C_buildable" class="dash-skeleton">—</span></b> (V4 today: <span data-source="options" data-field="pitch" data-where="id=v4_today" class="dash-skeleton">—</span>).</p>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Headline figures">
+    <div class="tile"><span class="lab">Weight, four front motors</span>
+      <span class="big"><span data-source="mass_props" data-field="mass_kg" data-where="design=V4%20four%20front%20motors" class="dash-skeleton">—</span><span class="unit">kg</span></span>
+      <span class="sub">+<span data-source="weight_change" data-field="mass_kg" data-row="0">—</span> kg on V4 today (<span data-source="mass_props" data-field="mass_kg" data-where="design=V4%20today%20(3%20front%20motors)">—</span> kg)</span></div>
+    <div class="tile"><span class="lab">CG moves</span>
+      <span class="big"><span data-source="weight_change" data-field="cg_fwd_mm" data-row="0" class="dash-skeleton">—</span><span class="unit">mm forward</span></span>
+      <span class="sub"><span data-source="weight_change" data-field="cg_up_mm" data-row="0">—</span> mm higher; hovers at <span data-source="options" data-field="hover" data-where="id=as_drawn">—</span>° nose-up as drawn</span></div>
+    <div class="tile"><span class="lab">Yaw, option C</span>
+      <span class="big"><span data-source="options" data-field="yaw" data-where="id=C_buildable" class="dash-skeleton">—</span><span class="unit">rad/s²</span></span>
+      <span class="sub">as drawn <span data-source="options" data-field="yaw" data-where="id=as_drawn">—</span>, V4 today <span data-source="options" data-field="yaw" data-where="id=v4_today">—</span></span></div>
+    <div class="tile"><span class="lab">Roll, option C</span>
+      <span class="big"><span data-source="options" data-field="roll" data-where="id=C_buildable" class="dash-skeleton">—</span><span class="unit">rad/s²</span></span>
+      <span class="sub">as drawn <span data-source="options" data-field="roll" data-where="id=as_drawn">—</span>, V4 today <span data-source="options" data-field="roll" data-where="id=v4_today">—</span></span></div>
+    <div class="tile"><span class="lab">Pitch, option C</span>
+      <span class="big"><span data-source="options" data-field="pitch" data-where="id=C_buildable" class="dash-skeleton">—</span><span class="unit">rad/s²</span></span>
+      <span class="sub">as drawn <span data-source="options" data-field="pitch" data-where="id=as_drawn">—</span>, V4 today <span data-source="options" data-field="pitch" data-where="id=v4_today">—</span></span></div>
+  </section>
+
+  <section class="sec" id="explore">
+    <h2>Try the front angles</h2>
+    <p class="note">Authority is the angular acceleration PX4 can command on each axis before any motor hits zero or full thrust, starting from the hover trim; the weakest of the three is what the search maximised. Tilt is forward from vertical. Cant is outward from the centreline, so a negative cant leans the jet in. The hover pitch is solved again for every design. <span id="stepnote"></span></p>
+    <div class="card" id="controls">
+      <div class="ctl">
+        <fieldset><legend>Outer pair, M7 / M8</legend>
+          <label class="sl" for="in-sc"><span>Cant</span><input type="range" id="in-sc" aria-label="Outer pair cant"><output id="out-sc">—</output></label>
+          <label class="sl" for="in-st"><span>Tilt</span><input type="range" id="in-st" aria-label="Outer pair tilt"><output id="out-st">—</output></label>
+        </fieldset>
+        <fieldset><legend>Vertical pair, M9 / M10</legend>
+          <label class="sl" for="in-vc"><span>Cant</span><input type="range" id="in-vc" aria-label="Vertical pair cant"><output id="out-vc">—</output></label>
+          <label class="sl" for="in-vt"><span>Tilt</span><input type="range" id="in-vt" aria-label="Vertical pair tilt"><output id="out-vt">—</output></label>
+        </fieldset>
+      </div>
+      <div class="presets" id="presets" data-source="options"><span class="lab">Jump to</span></div>
+      <div class="readout" id="readout">
+        <div class="ro"><span class="lab">Roll</span><span class="v"><span id="ro-roll" data-source="grid" data-field="roll" class="dash-skeleton">—</span></span></div>
+        <div class="ro"><span class="lab">Pitch</span><span class="v"><span id="ro-pitch" data-source="grid" data-field="pitch" class="dash-skeleton">—</span></span></div>
+        <div class="ro"><span class="lab">Yaw</span><span class="v"><span id="ro-yaw" data-source="grid" data-field="yaw" class="dash-skeleton">—</span></span></div>
+        <div class="ro"><span class="lab">Hover pitch</span><span class="v"><span id="ro-hover" data-source="grid" data-field="hover">—</span>°</span></div>
+        <div class="ro"><span class="lab">Motors in hover</span><span class="v"><span id="ro-umin" data-source="grid" data-field="umin">—</span> to <span id="ro-umax" data-source="grid" data-field="umax">—</span></span></div>
+        <span class="chip" id="ro-chip" hidden></span>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card" id="bars-card">
+        <h3>Authority by axis</h3>
+        <p class="note">rad/s², the chosen angles against the design as drawn and V4 today.</p>
+        <div class="key" id="bars-key"></div>
+        <div class="chart" id="bars" data-source="grid options"></div>
+      </div>
+      <div class="card" id="top-card">
+        <h3>Seen from above</h3>
+        <p class="note">Each arrow is where that jet pushes; its length is the share of the thrust that goes sideways or forward. Nose up the page.</p>
+        <div class="chart" id="topview" data-source="rotors"></div>
+      </div>
+    </div>
+    <div class="card" id="heat-card">
+      <div class="row"><h3>Both cants at once</h3>
+        <label class="lab" for="in-metric">Colour by <select id="in-metric"><option value="weakest">weakest axis</option><option value="roll">roll</option><option value="pitch">pitch</option><option value="yaw">yaw</option></select></label></div>
+      <p class="note" id="heat-note">Every combination of the two cants at the tilts chosen above. Click a cell to pick it. Grey cells need a motor outside its hover range.</p>
+      <div class="chart" id="heat" data-source="grid"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="montecarlo">
+    <h2>The Monte Carlo</h2>
+    <div class="grid2">
+      <div class="card" id="scatter-card">
+        <h3>Pitch against yaw, coloured by roll</h3>
+        <p class="note">The first round of random designs across the whole range of angles. Up and to the right is better on both axes; the options sit on the edge of the cloud. Click a point to load its angles.</p>
+        <div class="key" id="scatter-key"></div>
+        <div class="chart" id="scatter" data-source="mc_samples options"></div>
+      </div>
+      <div class="card" id="conv-card">
+        <h3>Search by round</h3>
+        <p class="note">Each round samples inside a box narrowed around the best so far; the line is the weakest axis of the best design found.</p>
+        <div class="chart" id="conv" data-source="convergence"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="options">
+    <h2>Options</h2>
+    <p class="note">As built: the 5th percentile after scattering every rotor's mounting angles, the CG and each motor's thrust. Click a row to load its angles above.</p>
+    <div class="card"><div class="tbl">
+      <table id="opt-table" data-source="options" data-row-key="id">
+        <thead><tr>
+          <th data-field="label">Design</th>
+          <th data-field="sc">M7/8 cant</th><th data-field="st">tilt</th>
+          <th data-field="vc">M9/10 cant</th><th data-field="vt">tilt</th>
+          <th data-field="hover" class="hide-n">Hover pitch</th>
+          <th data-field="roll">Roll</th><th data-field="pitch">Pitch</th><th data-field="yaw">Yaw</th>
+          <th data-field="roll_p5" class="hide-n">Roll as built</th><th data-field="pitch_p5" class="hide-n">Pitch as built</th><th data-field="yaw_p5" class="hide-n">Yaw as built</th>
+          <th data-field="umax" class="hide-n">Busiest motor</th>
+        </tr></thead><tbody></tbody>
+      </table>
+    </div></div>
+  </section>
+
+  <section class="sec" id="weight">
+    <h2>Weight</h2>
+    <div class="card"><div class="tbl">
+      <table id="mass-table" data-source="mass_props" data-row-key="design">
+        <thead><tr><th data-field="design">Design</th><th data-field="mass_kg">Mass, kg</th><th data-field="cg_x">CG x</th><th data-field="cg_y">CG y</th><th data-field="cg_z">CG z</th>
+          <th data-field="ixx" class="hide-n">Ixx</th><th data-field="iyy" class="hide-n">Iyy</th><th data-field="izz" class="hide-n">Izz</th><th data-field="weight_n">Weight, N</th><th data-field="thrust_n">Total thrust, N</th></tr></thead><tbody></tbody>
+      </table>
+    </div>
+    <p class="note">CG in the structural frame, metres from the reference point: x forward, z down, so a smaller z is higher.</p></div>
+    <div class="card"><div class="tbl">
+      <table id="chg-table" data-source="mass_changes" data-row-key="change">
+        <thead><tr><th data-field="change">What changed</th><th data-field="mass_kg">Mass, kg</th><th data-field="where" class="txt">Where</th><th data-field="source" class="txt hide-n">From</th></tr></thead><tbody></tbody>
+      </table>
+    </div>
+    <p class="note">Read from the open Fusion tab (four front motors side by side, side ESCs). The fourth battery is not in the CAD yet, so it is assumed beside the three. The new cradle is not counted.</p></div>
+  </section>
+
+  <p class="note" id="limits">Static model: PX4's pseudo-inverse allocation on the design's own effectiveness, thrust linear in the command, the inertia with its products. It does not fly the aircraft, check duct clearance or exhaust paths, or count the side force that comes with yaw from canted jets.</p>
+</div>
+
+<script>
+(() => {
+  const root = document.querySelector('.fa');
+  const KEYS = ['sc', 'st', 'vc', 'vt'];
+  const AXES = ['roll', 'pitch', 'yaw'];
+  const AXN = { roll: 'Roll', pitch: 'Pitch', yaw: 'Yaw' };
+  const PRESETS = [['as_drawn', 'As drawn'], ['A_free', 'A'], ['B_keep_pitch', 'B'], ['C_buildable', 'C']];
+  const deg = (v) => (v < 0 ? '−' : '') + Math.abs(v) + '°';
+  const f2 = (v) => (v == null || v === '' ? '—' : (+v).toFixed(2));
+  const pct = d3.format('.1%');
+
+  // colours resolved from the theme, so ramps can interpolate
+  const probe = document.createElement('span'); probe.style.display = 'none'; root.appendChild(probe);
+  const css = (c) => { probe.style.color = c; return getComputedStyle(probe).color; };
+
+  // ---------- the grid, parsed once
+  let gRef = null, gMap = null, ext = null, step = {}, gMax = null;
+  const keyOf = (o) => KEYS.map((k) => o[k]).join(',');
+  function grid() {
+    const g = dash.data('grid');
+    if (g.status !== 'ok') return null;
+    if (g.data !== gRef) {
+      gRef = g.data; gMap = new Map(); ext = {}; const vals = {};
+      KEYS.forEach((k) => { ext[k] = [Infinity, -Infinity]; vals[k] = new Set(); });
+      gMax = { roll: 0, pitch: 0, yaw: 0 };
+      for (const r of g.data) {
+        const o = {}; for (const k in r) o[k] = +r[k];
+        gMap.set(keyOf(o), o);
+        KEYS.forEach((k) => { vals[k].add(o[k]); ext[k][0] = Math.min(ext[k][0], o[k]); ext[k][1] = Math.max(ext[k][1], o[k]); });
+        if (o.ok) AXES.forEach((a) => { gMax[a] = Math.max(gMax[a], o[a]); });
+      }
+      KEYS.forEach((k) => {
+        const s = [...vals[k]].sort((a, b) => a - b); step[k] = s.length > 1 ? s[1] - s[0] : 1;
+        const el = document.getElementById('in-' + k); el.min = ext[k][0]; el.max = ext[k][1]; el.step = step[k];
+      });
+      document.getElementById('stepnote').textContent = `The sliders move in the ${step.sc}° steps the precomputed grid holds (${gMap.size.toLocaleString('en')} designs).`;
+    }
+    return gMap;
+  }
+  const snap = (v, k) => Math.max(ext[k][0], Math.min(ext[k][1], Math.round(v / step[k]) * step[k]));
+  const sel = () => { const p = dash.params(); return { sc: +p.sc, st: +p.st, vc: +p.vc, vt: +p.vt }; };
+  function load(o) {
+    if (!ext) return;
+    const p = {}; KEYS.forEach((k) => { if (o[k] != null && o[k] !== '') p[k] = snap(+o[k], k); });
+    dash.setParams(p);
+  }
+  KEYS.forEach((k) => {
+    const el = document.getElementById('in-' + k);
+    el.addEventListener('input', () => dash.setParams({ [k]: +el.value }));
+  });
+  const metricSel = document.getElementById('in-metric');
+  metricSel.addEventListener('change', () => dash.setParams({ metric: metricSel.value }));
+
+  const optRows = () => { const o = dash.data('options'); return o.status === 'ok' ? o.data : []; };
+  const opt = (id) => optRows().find((r) => r.id === id);
+
+  // ---------- tooltip
+  function tip(card) {
+    let t = card.querySelector('.fa-tip');
+    if (!t) { t = document.createElement('div'); t.className = 'fa-tip'; t.hidden = true; card.appendChild(t); }
+    return t;
+  }
+  function showTip(card, ev, title, lines) {
+    const t = tip(card); t.replaceChildren();
+    const h = document.createElement('div'); h.className = 't'; h.textContent = title; t.appendChild(h);
+    for (const l of lines) { const d = document.createElement('div'); d.textContent = l; t.appendChild(d); }
+    t.hidden = false;
+    const b = card.getBoundingClientRect();
+    let x = ev.clientX - b.left + 12, y = ev.clientY - b.top + 12;
+    const w = t.offsetWidth, hh = t.offsetHeight;
+    if (x + w > b.width - 4) x = ev.clientX - b.left - w - 12;
+    if (y + hh > b.height - 4) y = ev.clientY - b.top - hh - 12;
+    t.style.left = Math.max(4, x) + 'px'; t.style.top = Math.max(4, y) + 'px';
+  }
+  const hideTip = (card) => { const t = card.querySelector('.fa-tip'); if (t) t.hidden = true; };
+
+  function textW(svg, s) {
+    const t = svg.append('text').text(s); const w = t.node().getComputedTextLength(); t.remove(); return w;
+  }
+  function styleAxis(g) {
+    g.attr('font-size', null).attr('font-family', null);
+    g.selectAll('.domain').attr('stroke', 'var(--cds-chart-axis)');
+    g.selectAll('.tick line').attr('stroke', 'var(--cds-chart-axis)');
+  }
+
+  // ---------- controls and readouts
+  function drawControls(s, cur) {
+    KEYS.forEach((k) => {
+      const el = document.getElementById('in-' + k);
+      if (document.activeElement !== el) el.value = s[k];
+      document.getElementById('out-' + k).textContent = deg(s[k]);
+    });
+    if (document.activeElement !== metricSel) metricSel.value = dash.params().metric || 'weakest';
+    const where = KEYS.map((k) => `${k}=${s[k]}`).join('&');
+    const chip = document.getElementById('ro-chip');
+    ['roll', 'pitch', 'yaw', 'hover', 'umin', 'umax'].forEach((f) => {
+      const el = document.getElementById('ro-' + f);
+      el.setAttribute('data-where', where);
+      el.classList.toggle('dash-skeleton', !cur);
+      el.textContent = !cur ? '—' : f === 'umin' || f === 'umax' ? pct(cur[f]) : f2(cur[f]);
+    });
+    chip.hidden = !cur;
+    if (cur) {
+      chip.className = 'chip ' + (cur.ok ? 'ok' : 'bad');
+      chip.textContent = cur.ok ? 'Hovers with every motor in range' : 'A motor is outside its hover range';
+    }
+    // presets
+    const box = document.getElementById('presets');
+    if (!box.querySelector('button') && optRows().length) {
+      for (const [id, name] of PRESETS) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'pre'; b.dataset.id = id; b.textContent = name;
+        b.addEventListener('click', () => { const r = opt(id); if (r) load(r); });
+        box.appendChild(b);
+      }
+    }
+    box.querySelectorAll('button').forEach((b) => {
+      const r = opt(b.dataset.id);
+      const on = r && ext && KEYS.every((k) => snap(+r[k], k) === s[k]);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  // ---------- grouped bars
+  function drawBars(cur) {
+    const el = document.getElementById('bars'); const card = document.getElementById('bars-card');
+    const W = el.clientWidth; if (!W) return;
+    const series = [
+      { name: 'V4 today', color: 'var(--cds-chart-muted)', get: (a) => opt('v4_today')?.[a] },
+      { name: 'Four front, as drawn', color: dash.colors[1], get: (a) => opt('as_drawn')?.[a] },
+      { name: 'Chosen angles', color: dash.colors[0], get: (a) => (cur ? cur[a] : null) },
+    ];
+    const key = document.getElementById('bars-key');
+    if (!key.childElementCount) for (const s of series) { const sp = document.createElement('span'); const i = document.createElement('i'); i.style.background = s.color; sp.append(i, s.name); key.appendChild(sp); }
+    const svgSel = d3.select(el).selectAll('svg').data([0]).join('svg').attr('width', '100%');
+    svgSel.selectAll('*').remove();
+    const labW = Math.max(...AXES.map((a) => textW(svgSel, AXN[a]))) + 10;
+    const barH = 14, gap = 4, groupGap = 18, m = { t: 4, r: 44, b: 22, l: labW };
+    const H = m.t + m.b + AXES.length * (3 * barH + 2 * gap) + (AXES.length - 1) * groupGap;
+    svgSel.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    el.style.minHeight = H + 'px';
+    const xmax = gMax ? Math.max(gMax.roll, gMax.pitch, gMax.yaw) : 30;
+    const x = d3.scaleLinear([0, xmax], [m.l, W - m.r]).nice();
+    const g = svgSel.append('g');
+    g.append('g').selectAll('line').data(x.ticks(5)).join('line')
+      .attr('x1', (d) => x(d)).attr('x2', (d) => x(d)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-grid)');
+    const ax = g.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(5).tickSizeOuter(0));
+    styleAxis(ax);
+    AXES.forEach((a, i) => {
+      const y0 = m.t + i * (3 * barH + 2 * gap + groupGap);
+      g.append('text').attr('x', m.l - 8).attr('y', y0 + (3 * barH + 2 * gap) / 2).attr('dy', '0.35em').attr('text-anchor', 'end').attr('class', 'strong').text(AXN[a]);
+      series.forEach((s, j) => {
+        const v = s.get(a); if (v == null) return;
+        const y = y0 + j * (barH + gap);
+        g.append('rect').attr('x', x(0)).attr('y', y).attr('height', barH).attr('width', Math.max(0, x(+v) - x(0))).attr('rx', 4).style('fill', s.color)
+          .on('mousemove', (ev) => showTip(card, ev, s.name, [`${AXN[a]}: ${f2(v)} rad/s²`])).on('mouseleave', () => hideTip(card));
+        g.append('text').attr('x', x(+v) + 4).attr('y', y + barH / 2).attr('dy', '0.35em').attr('class', j === 2 ? 'strong' : null).text(f2(v));
+      });
+    });
+  }
+
+  // ---------- top view
+  function axisOf(tilt, cant, y) {
+    const t = tilt * Math.PI / 180, c = cant * Math.PI / 180 * (y >= 0 ? 1 : -1);
+    return [Math.sin(t), Math.sin(c) * Math.cos(t), -Math.cos(c) * Math.cos(t)];
+  }
+  function drawTop(s) {
+    const el = document.getElementById('topview'); const card = document.getElementById('top-card');
+    const R = dash.data('rotors'); const W = el.clientWidth; if (!W) return;
+    const svg = d3.select(el).selectAll('svg').data([0]).join('svg').attr('width', '100%');
+    svg.selectAll('*').remove();
+    if (R.status !== 'ok') return;
+    const rows = R.data;
+    const xs = rows.map((r) => +r.x), ys = rows.map((r) => +r.y);
+    const span = { x: [d3.min(xs) - 0.12, d3.max(xs) + 0.12], y: [d3.min(ys) - 0.12, d3.max(ys) + 0.12] };
+    const H = Math.min(360, Math.max(220, W * 0.75));
+    svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H); el.style.minHeight = H + 'px';
+    const k = Math.min((W - 20) / (span.y[1] - span.y[0]), (H - 20) / (span.x[1] - span.x[0]));
+    const cx = W / 2 - k * (span.y[0] + span.y[1]) / 2, cy = H / 2 + k * (span.x[0] + span.x[1]) / 2;
+    const P = (x, y) => [cx + k * y, cy - k * x];
+    const arrowLen = 0.16;
+    const defs = svg.append('defs');
+    const mk = (id, col) => defs.append('marker').attr('id', id).attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5)
+      .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto-start-reverse').append('path').attr('d', 'M0,0L10,5L0,10z').style('fill', col);
+    mk('fa-arr-f', dash.colors[0]); mk('fa-arr-r', 'var(--cds-chart-muted)');
+    const g = svg.append('g');
+    // centreline
+    const [lx0, ly0] = P(span.x[1], 0), [lx1, ly1] = P(span.x[0], 0);
+    g.append('line').attr('x1', lx0).attr('y1', ly0).attr('x2', lx1).attr('y2', ly1).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 4');
+    for (const r of rows) {
+      const [px, py] = P(+r.x, +r.y);
+      if (r.group === 'cg') {
+        g.append('circle').attr('cx', px).attr('cy', py).attr('r', 6).style('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.5);
+        g.append('line').attr('x1', px - 9).attr('x2', px + 9).attr('y1', py).attr('y2', py).attr('stroke', 'var(--color-fg)');
+        g.append('line').attr('x1', px).attr('x2', px).attr('y1', py - 9).attr('y2', py + 9).attr('stroke', 'var(--color-fg)');
+        g.append('text').attr('x', px + 10).attr('y', py - 8).text('CG');
+        continue;
+      }
+      const front = r.group !== 'rear';
+      const tilt = r.group === 'side' ? s.st : r.group === 'vert' ? s.vt : +r.tilt;
+      const cant = r.group === 'side' ? s.sc : r.group === 'vert' ? s.vc : +r.cant;
+      const a = axisOf(tilt, cant, +r.y);
+      const [qx, qy] = P(+r.x + a[0] * arrowLen, +r.y + a[1] * arrowLen);
+      const col = front ? dash.colors[0] : 'var(--cds-chart-muted)';
+      g.append('circle').attr('cx', px).attr('cy', py).attr('r', Math.max(5, k * 0.04)).style('fill', 'var(--color-panel)').attr('stroke', col).attr('stroke-width', front ? 2 : 1.25)
+        .on('mousemove', (ev) => showTip(card, ev, r.name, [`tilt ${deg(Math.round(tilt * 10) / 10)}, cant ${deg(Math.round(cant * 10) / 10)}`, `sideways/forward share ${pct(Math.hypot(a[0], a[1]))}`]))
+        .on('mouseleave', () => hideTip(card));
+      if (Math.hypot(a[0], a[1]) > 0.02) g.append('line').attr('x1', px).attr('y1', py).attr('x2', qx).attr('y2', qy).attr('stroke', col).attr('stroke-width', front ? 2 : 1.25).attr('stroke-linecap', 'round').attr('marker-end', `url(#${front ? 'fa-arr-f' : 'fa-arr-r'})`).style('pointer-events', 'none');
+      if (front) g.append('text').attr('x', px + (+r.y < 0 ? -10 : 10)).attr('y', py + 4).attr('text-anchor', +r.y < 0 ? 'end' : 'start').attr('class', 'strong').text(r.name);
+    }
+  }
+
+  // ---------- heatmap of the two cants
+  const metricOf = (o, m) => (m === 'weakest' ? Math.min(o.roll, o.pitch, o.yaw) : o[m]);
+  function drawHeat(s) {
+    const el = document.getElementById('heat'); const card = document.getElementById('heat-card');
+    const W = el.clientWidth; if (!W || !gMap) return;
+    const m = dash.params().metric || 'weakest';
+    const xsV = d3.range(ext.sc[0], ext.sc[1] + 1e-9, step.sc), ysV = d3.range(ext.vc[0], ext.vc[1] + 1e-9, step.vc);
+    const cells = [];
+    for (const a of xsV) for (const b of ysV) { const o = gMap.get(keyOf({ sc: a, st: s.st, vc: b, vt: s.vt })); if (o) cells.push(o); }
+    const svg = d3.select(el).selectAll('svg').data([0]).join('svg').attr('width', '100%');
+    svg.selectAll('*').remove();
+    const mg = { t: 8, r: 70, b: 34, l: 0 };
+    mg.l = Math.max(...ysV.map((v) => textW(svg, deg(v)))) + 34;
+    const cw = Math.max(8, (W - mg.l - mg.r) / xsV.length), ch = Math.max(8, Math.min(16, cw));
+    const H = mg.t + mg.b + ch * ysV.length;
+    svg.attr('viewBox', `0 0 ${W} ${H}`).attr('height', H); el.style.minHeight = H + 'px';
+    const x = d3.scaleBand(xsV, [mg.l, mg.l + cw * xsV.length]).paddingInner(0.06);
+    const y = d3.scaleBand(ysV.slice().reverse(), [mg.t, mg.t + ch * ysV.length]).paddingInner(0.06);
+    const okv = cells.filter((o) => o.ok).map((o) => metricOf(o, m));
+    const lo = d3.min(okv) ?? 0, hi = d3.max(okv) ?? 1;
+    const ramp = d3.interpolateRgb(css('var(--color-panel)'), css(dash.colors[0]));
+    const colr = (v) => ramp(0.1 + 0.9 * (hi > lo ? (v - lo) / (hi - lo) : 1));
+    const g = svg.append('g');
+    g.selectAll('rect.c').data(cells).join('rect').attr('class', 'c')
+      .attr('x', (o) => x(o.sc)).attr('y', (o) => y(o.vc)).attr('width', x.bandwidth()).attr('height', y.bandwidth()).attr('rx', 2)
+      .style('fill', (o) => (o.ok ? colr(metricOf(o, m)) : 'var(--cds-chart-grid)')).style('cursor', 'pointer')
+      .on('mousemove', (ev, o) => showTip(card, ev, `M7/8 cant ${deg(o.sc)}, M9/10 cant ${deg(o.vc)}`, [`roll ${f2(o.roll)}  pitch ${f2(o.pitch)}  yaw ${f2(o.yaw)}`, `hover pitch ${f2(o.hover)}°, motors ${pct(o.umin)} to ${pct(o.umax)}`]))
+      .on('mouseleave', () => hideTip(card))
+      .on('click', (ev, o) => dash.setParams({ sc: o.sc, vc: o.vc }));
+    if (x(s.sc) != null && y(s.vc) != null)
+      g.append('rect').attr('x', x(s.sc) - 1.5).attr('y', y(s.vc) - 1.5).attr('width', x.bandwidth() + 3).attr('height', y.bandwidth() + 3).attr('rx', 3)
+        .style('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 2).style('pointer-events', 'none');
+    const xt = xsV.filter((v, i) => i % Math.max(1, Math.ceil(28 * xsV.length / (W - mg.l - mg.r))) === 0 || v === 0);
+    const ax = g.append('g').attr('transform', `translate(0,${mg.t + ch * ysV.length})`).call(d3.axisBottom(x).tickValues([...new Set(xt)]).tickFormat(deg).tickSizeOuter(0));
+    styleAxis(ax); ax.select('.domain').remove();
+    const yt = ysV.filter((v) => v % (step.vc * 3) === 0);
+    const ay = g.append('g').attr('transform', `translate(${mg.l},0)`).call(d3.axisLeft(y).tickValues(yt).tickFormat(deg).tickSizeOuter(0));
+    styleAxis(ay); ay.select('.domain').remove();
+    g.append('text').attr('x', mg.l + (cw * xsV.length) / 2).attr('y', H - 2).attr('text-anchor', 'middle').text('M7 / M8 cant');
+    g.append('text').attr('transform', `translate(10,${mg.t + (ch * ysV.length) / 2}) rotate(-90)`).attr('text-anchor', 'middle').text('M9 / M10 cant');
+    // legend
+    const lgX = mg.l + cw * xsV.length + 16, lgH = Math.min(140, ch * ysV.length), lgY = mg.t;
+    const gid = 'fa-heat-grad';
+    const grad = svg.append('defs').append('linearGradient').attr('id', gid).attr('x1', 0).attr('x2', 0).attr('y1', 1).attr('y2', 0);
+    [0, 0.5, 1].forEach((t) => grad.append('stop').attr('offset', t).style('stop-color', ramp(0.1 + 0.9 * t)));
+    g.append('rect').attr('x', lgX).attr('y', lgY).attr('width', 10).attr('height', lgH).attr('rx', 3).style('fill', `url(#${gid})`);
+    g.append('text').attr('x', lgX + 14).attr('y', lgY + 8).text(f2(hi));
+    g.append('text').attr('x', lgX + 14).attr('y', lgY + lgH).text(f2(lo));
+    g.append('text').attr('x', lgX).attr('y', lgY + lgH + 16).text('rad/s²');
+    document.getElementById('heat-note').textContent = `Every combination of the two cants with M7/M8 tilted ${deg(s.st)} and M9/M10 tilted ${deg(s.vt)}. Click a cell to pick it. Grey cells need a motor outside its hover range.`;
+  }
+
+  // ---------- Monte Carlo scatter
+  let scKey = null, scRef = null, scGen = 0, scPts = null, scX = null, scY = null, scDel = null;
+  function drawScatter(s, cur) {
+    const el = document.getElementById('scatter'); const card = document.getElementById('scatter-card');
+    const S = dash.data('mc_samples'); const W = el.clientWidth; if (!W) return;
+    const H = Math.min(380, Math.max(240, W * 0.7));
+    const svg = d3.select(el).selectAll('svg').data([0]).join('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    el.style.minHeight = H + 'px';
+    const theme = css(dash.colors[0]) + css('var(--color-panel)');
+    if (S.data !== scRef) { scRef = S.data; scGen++; }
+    const k = [W, scGen, optRows().length, theme].join('|');
+    if (S.status !== 'ok') { svg.selectAll('*').remove(); scKey = null; return; }
+    if (k !== scKey || scKey === null) {
+      scKey = k; svg.selectAll('*').remove();
+      scPts = S.data.map((r) => ({ id: r.sample, sc: +r.sc, st: +r.st, vc: +r.vc, vt: +r.vt, roll: +r.roll, pitch: +r.pitch, yaw: +r.yaw, hover: +r.hover, umax: +r.umax, ok: +r.ok }));
+      const yMaxLab = textW(svg, '00');
+      const m = { t: 10, r: 14, b: 34, l: yMaxLab + 30 };
+      scX = d3.scaleLinear(d3.extent(scPts, (d) => d.pitch), [m.l, W - m.r]).nice();
+      scY = d3.scaleLinear([0, d3.max(scPts, (d) => d.yaw)], [H - m.b, m.t]).nice();
+      const rr = d3.extent(scPts.filter((d) => d.ok), (d) => d.roll);
+      const ramp = d3.interpolateRgb(css('var(--cds-chart-muted)'), css(dash.colors[0]));
+      const col = (d) => (d.ok ? ramp((d.roll - rr[0]) / (rr[1] - rr[0] || 1)) : 'var(--cds-chart-grid)');
+      const g = svg.append('g').attr('class', 'base');
+      g.append('g').selectAll('line').data(scY.ticks(5)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (d) => scY(d)).attr('y2', (d) => scY(d)).attr('stroke', 'var(--cds-chart-grid)');
+      styleAxis(g.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(scX).ticks(Math.max(3, Math.floor(W / 80))).tickSizeOuter(0)));
+      styleAxis(g.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(scY).ticks(5).tickSizeOuter(0)));
+      g.append('text').attr('x', (m.l + W - m.r) / 2).attr('y', H - 2).attr('text-anchor', 'middle').text('Pitch, rad/s²');
+      g.append('text').attr('transform', `translate(10,${(m.t + H - m.b) / 2}) rotate(-90)`).attr('text-anchor', 'middle').text('Yaw, rad/s²');
+      g.append('g').selectAll('circle').data(scPts).join('circle').attr('cx', (d) => scX(d.pitch)).attr('cy', (d) => scY(d.yaw)).attr('r', 2.2).style('fill', col).style('opacity', 0.75);
+      const og = g.append('g');
+      for (const r of optRows()) {
+        const px = scX(+r.pitch), py = scY(+r.yaw);
+        og.append('path').attr('d', d3.symbol(d3.symbolDiamond, 70)()).attr('transform', `translate(${px},${py})`).style('fill', r.id === 'v4_today' ? 'var(--cds-chart-muted)' : 'var(--color-fg)').attr('stroke', 'var(--color-panel)').attr('stroke-width', 1.5);
+        const short = r.id === 'v4_today' ? 'V4 today' : r.id === 'as_drawn' ? 'As drawn' : r.id[0];
+        og.append('text').attr('x', px + 8).attr('y', py - 6).attr('class', 'strong').text(short);
+      }
+      const key = document.getElementById('scatter-key');
+      key.replaceChildren();
+      const add = (c, t) => { const sp = document.createElement('span'); const i = document.createElement('i'); i.style.background = c; sp.append(i, t); key.appendChild(sp); };
+      add(ramp(0), `roll ${f2(rr[0])}`); add(ramp(1), `roll ${f2(rr[1])}`); add('var(--cds-chart-grid)', 'motor out of range'); add('var(--color-fg)', 'options');
+      scDel = d3.Delaunay.from(scPts, (d) => scX(d.pitch), (d) => scY(d.yaw));
+      svg.append('g').attr('class', 'sel');
+      svg.append('rect').attr('class', 'hit').attr('x', 0).attr('y', 0).attr('width', W).attr('height', H).style('fill', 'transparent').style('cursor', 'crosshair')
+        .on('mousemove', (ev) => {
+          const [mx, my] = d3.pointer(ev); const d = scPts[scDel.find(mx, my)];
+          if (!d || Math.hypot(scX(d.pitch) - mx, scY(d.yaw) - my) > 18) { hideTip(card); return; }
+          showTip(card, ev, `M7/8 ${deg(d.sc)} / ${deg(d.st)}   M9/10 ${deg(d.vc)} / ${deg(d.vt)}`, [`roll ${f2(d.roll)}  pitch ${f2(d.pitch)}  yaw ${f2(d.yaw)}`, `hover pitch ${f2(d.hover)}°, busiest motor ${pct(d.umax)}`]);
+        })
+        .on('mouseleave', () => hideTip(card))
+        .on('click', (ev) => { const [mx, my] = d3.pointer(ev); const d = scPts[scDel.find(mx, my)]; if (d && Math.hypot(scX(d.pitch) - mx, scY(d.yaw) - my) <= 18) load(d); });
+    }
+    const sg = svg.select('g.sel'); sg.selectAll('*').remove();
+    if (cur && scX) {
+      const px = scX(cur.pitch), py = scY(cur.yaw);
+      sg.append('circle').attr('cx', px).attr('cy', py).attr('r', 7).style('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2.5);
+      sg.append('text').attr('x', px - 10).attr('y', py + 4).attr('text-anchor', 'end').attr('class', 'strong').text('chosen');
+    }
+  }
+
+  // ---------- convergence
+  function drawConv() {
+    const el = document.getElementById('conv'); const card = document.getElementById('conv-card');
+    const C = dash.data('convergence'); const W = el.clientWidth; if (!W) return;
+    const H = 200;
+    const svg = d3.select(el).selectAll('svg').data([0]).join('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    svg.selectAll('*').remove(); el.style.minHeight = H + 'px';
+    if (C.status !== 'ok') return;
+    const rows = C.data;
+    const m = { t: 16, r: 60, b: 34, l: textW(svg, '00') + 30 };
+    const x = d3.scalePoint(rows.map((r) => r.round), [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.roll, r.pitch, r.yaw))], [H - m.b, m.t]).nice();
+    const g = svg.append('g');
+    g.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    styleAxis(g.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickFormat((d) => `round ${d + 1}`).tickSizeOuter(0)));
+    styleAxis(g.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSizeOuter(0)));
+    const series = [['weakest', dash.colors[0], 2], ['roll', 'var(--cds-chart-muted)', 1.25], ['pitch', 'var(--cds-chart-muted)', 1.25], ['yaw', 'var(--cds-chart-muted)', 1.25]];
+    const ends = [];
+    for (const [f, c, w] of series) {
+      g.append('path').datum(rows).attr('d', d3.line((r) => x(r.round), (r) => y(r[f]))).style('fill', 'none').attr('stroke', c).attr('stroke-width', w).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+      const last = rows[rows.length - 1]; ends.push({ f, y: y(last[f]), v: last[f], strong: f === 'weakest' });
+    }
+    ends.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 12) ends[i].y = ends[i - 1].y + 12;
+    for (const e of ends) g.append('text').attr('x', W - m.r + 6).attr('y', e.y).attr('dy', '0.35em').attr('class', e.strong ? 'strong' : null).text(`${e.f} ${f2(e.v)}`);
+    g.selectAll('circle').data(rows).join('circle').attr('cx', (r) => x(r.round)).attr('cy', (r) => y(r.weakest)).attr('r', 3.5).style('fill', dash.colors[0])
+      .on('mousemove', (ev, r) => showTip(card, ev, `Round ${r.round + 1}`, [`${r.feasible.toLocaleString('en')} of ${r.n.toLocaleString('en')} hover in range`, `best: roll ${f2(r.roll)}  pitch ${f2(r.pitch)}  yaw ${f2(r.yaw)}`]))
+      .on('mouseleave', () => hideTip(card));
+  }
+
+  // ---------- tables
+  const num = (v, n) => (v == null || v === '' ? '—' : (+v).toFixed(n));
+  function drawOptTable(s) {
+    const tb = document.querySelector('#opt-table tbody'); const rows = optRows();
+    tb.replaceChildren();
+    for (const r of rows) {
+      const tr = document.createElement('tr'); tr.dataset.key = r.id;
+      const inGrid = r.vc != null;
+      if (inGrid) { tr.className = 'pick'; tr.tabIndex = 0; }
+      if (inGrid && ext && KEYS.every((k) => snap(+r[k], k) === s[k])) tr.classList.add('on');
+      const cells = [[r.label], [num(r.sc, 1)], [num(r.st, 1)], [num(r.vc, 1)], [num(r.vt, 1)], [num(r.hover, 2), 'hide-n'], [num(r.roll, 2)], [num(r.pitch, 2)], [num(r.yaw, 2)],
+        [num(r.roll_p5, 2), 'hide-n'], [num(r.pitch_p5, 2), 'hide-n'], [num(r.yaw_p5, 2), 'hide-n'], [r.umax == null ? '—' : pct(r.umax), 'hide-n']];
+      for (const [t, c] of cells) { const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); }
+      tb.appendChild(tr);
+    }
+  }
+  const optTable = document.getElementById('opt-table');
+  const pickRow = (ev) => { const tr = ev.target.closest('tr.pick'); if (tr) { const r = opt(tr.dataset.key); if (r) load(r); } };
+  optTable.addEventListener('click', pickRow);
+  optTable.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pickRow(ev); } });
+
+  function drawMass() {
+    const mp = dash.data('mass_props'), mc = dash.data('mass_changes');
+    const tb = document.querySelector('#mass-table tbody'); tb.replaceChildren();
+    if (mp.status === 'ok') for (const r of mp.data) {
+      const tr = document.createElement('tr');
+      [[r.design], [num(r.mass_kg, 3)], [num(r.cg_x, 4)], [num(r.cg_y, 4)], [num(r.cg_z, 4)], [num(r.ixx, 3), 'hide-n'], [num(r.iyy, 3), 'hide-n'], [num(r.izz, 3), 'hide-n'], [num(r.weight_n, 1)], [num(r.thrust_n, 1)]]
+        .forEach(([t, c]) => { const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); });
+      tb.appendChild(tr);
+    }
+    const tc = document.querySelector('#chg-table tbody'); tc.replaceChildren();
+    if (mc.status === 'ok') for (const r of mc.data) {
+      const tr = document.createElement('tr');
+      [[r.change], [num(r.mass_kg, 3)], [r.where, 'txt'], [r.source, 'txt hide-n']]
+        .forEach(([t, c]) => { const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); });
+      tc.appendChild(tr);
+    }
+  }
+
+  // ---------- headline marks filled from their datasets
+  function fillMarks() {
+    root.querySelectorAll('header [data-source], #tiles [data-source]').forEach((el) => {
+      const id = el.dataset.source, f = el.dataset.field; const d = dash.data(id);
+      if (d.status !== 'ok') { el.textContent = '—'; return; }
+      let row = null;
+      if (el.dataset.row != null) row = d.data[+el.dataset.row];
+      else if (el.dataset.where) {
+        const [k, v] = el.dataset.where.split('='); const want = decodeURIComponent(v);
+        row = d.data.find((r) => String(r[k]) === want);
+      }
+      el.classList.remove('dash-skeleton');
+      el.textContent = row && row[f] != null ? (+row[f]).toFixed(f === 'mass_kg' && id === 'mass_props' ? 2 : f.endsWith('_mm') ? 1 : 2) : '—';
+    });
+  }
+
+  dash.calc('weight_change', {
+    inputs: ['mass_props'],
+    title: 'Change from V4 today',
+    description: 'Four-front-motor mass minus V4 today, and how far the CG moves forward and up, in millimetres.',
+    fn: (mass_props) => {
+      const old = mass_props.find((r) => r.design.startsWith('V4 today'));
+      const now = mass_props.find((r) => r.design === 'V4 four front motors');
+      return [{ mass_kg: +(now.mass_kg - old.mass_kg).toFixed(3), cg_fwd_mm: +((now.cg_x - old.cg_x) * 1000).toFixed(1), cg_up_mm: +((old.cg_z - now.cg_z) * 1000).toFixed(1) }];
+    },
+  });
+
+  dash.onData(() => {
+    const g = grid();
+    const s = sel();
+    const cur = g ? g.get(keyOf(s)) : null;
+    fillMarks();
+    drawControls(s, cur);
+    drawBars(cur);
+    drawTop(s);
+    drawHeat(s);
+    drawScatter(s, cur);
+    drawConv();
+    drawOptTable(s);
+    drawMass();
+  });
+})();
+</script>

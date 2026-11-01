@@ -1,0 +1,110 @@
+[
+ {
+  "motor": "M7",
+  "occ": "MOTOR_L_REFERENCE (1)",
+  "pivot_mm": [
+   -59.2,
+   512.4,
+   -255.0
+  ],
+  "rot1_about": "Z (fore-aft)",
+  "rot1_deg": -15.0,
+  "rot2_axis": [
+   -0.707,
+   0.707,
+   0.0
+  ],
+  "rot2_deg": 22.6,
+  "shift_x_mm": -2,
+  "final_axis": [
+   0.653,
+   0.653,
+   -0.384
+  ],
+  "from_vertical": 49.2,
+  "nose_on_lean": 45.0,
+  "side_lean_fwd": 30.5,
+  "today_from_vertical": 30.0
+ },
+ {
+  "motor": "M8",
+  "occ": "MOTOR_R_REFERENCE (1)",
+  "pivot_mm": [
+   59.2,
+   512.4,
+   -255.0
+  ],
+  "rot1_about": "Z (fore-aft)",
+  "rot1_deg": 15.0,
+  "rot2_axis": [
+   -0.707,
+   -0.707,
+   -0.0
+  ],
+  "rot2_deg": 22.6,
+  "shift_x_mm": 2,
+  "final_axis": [
+   -0.653,
+   0.653,
+   -0.384
+  ],
+  "from_vertical": 49.2,
+  "nose_on_lean": 45.0,
+  "side_lean_fwd": 30.5,
+  "today_from_vertical": 30.0
+ },
+ {
+  "motor": "M9",
+  "occ": "MOTOR_V_LEFT_REFERENCE (1)",
+  "pivot_mm": [
+   -52.0,
+   479.5,
+   -355.0
+  ],
+  "rot1_about": "Z (fore-aft)",
+  "rot1_deg": 30.0,
+  "rot2_axis": [
+   -0.866,
+   -0.5,
+   -0.0
+  ],
+  "rot2_deg": 11.1,
+  "shift_x_mm": 0,
+  "final_axis": [
+   -0.491,
+   0.85,
+   -0.193
+  ],
+  "from_vertical": 31.8,
+  "nose_on_lean": 30.0,
+  "side_lean_fwd": 12.8,
+  "today_from_vertical": 0.0
+ },
+ {
+  "motor": "M10",
+  "occ": "MOTOR_V_RIGHT_REFERENCE (1)",
+  "pivot_mm": [
+   52.0,
+   479.5,
+   -355.0
+  ],
+  "rot1_about": "Z (fore-aft)",
+  "rot1_deg": -30.0,
+  "rot2_axis": [
+   -0.866,
+   0.5,
+   0.0
+  ],
+  "rot2_deg": 11.1,
+  "shift_x_mm": 0,
+  "final_axis": [
+   0.491,
+   0.85,
+   -0.193
+  ],
+  "from_vertical": 31.8,
+  "nose_on_lean": 30.0,
+  "side_lean_fwd": 12.8,
+  "today_from_vertical": 0.0
+ }
+]

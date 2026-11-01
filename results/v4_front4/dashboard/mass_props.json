@@ -1,0 +1,26 @@
+[
+ {
+  "design": "V4 today (3 front motors)",
+  "mass_kg": 13.4,
+  "cg_x": -0.1994,
+  "cg_y": 0.0012,
+  "cg_z": -0.4319,
+  "ixx": 0.886,
+  "iyy": 1.193,
+  "izz": 1.637,
+  "thrust_n": 267.0,
+  "weight_n": 131.4
+ },
+ {
+  "design": "V4 four front motors",
+  "mass_kg": 14.63,
+  "cg_x": -0.1745,
+  "cg_y": 0.0012,
+  "cg_z": -0.4407,
+  "ixx": 0.918,
+  "iyy": 1.397,
+  "izz": 1.841,
+  "thrust_n": 299.0,
+  "weight_n": 143.5
+ }
+]

@@ -1,0 +1,32 @@
+[
+ {
+  "change": "4th battery pack",
+  "mass_kg": 0.7,
+  "where": "beside the three, x -0.145 (assumed: not in the CAD)",
+  "source": "BATTERY_3PACK__M700g label"
+ },
+ {
+  "change": "2nd vertical front EDF (M10)",
+  "mass_kg": 0.33,
+  "where": "x 0.355, y +0.052",
+  "source": "XFLY 80mm EDF__M330g label, Fusion position"
+ },
+ {
+  "change": "Extra front ESC",
+  "mass_kg": 0.2,
+  "where": "x 0.355, y +0.136",
+  "source": "ESC__M200g label, Fusion position"
+ },
+ {
+  "change": "M9 moved to y -0.052, 1 cm higher",
+  "mass_kg": 0.0,
+  "where": "x 0.355",
+  "source": "Fusion position"
+ },
+ {
+  "change": "Centre front ESC moved",
+  "mass_kg": 0.0,
+  "where": "x 0.198 to x 0.355, y -0.136",
+  "source": "Fusion position"
+ }
+]

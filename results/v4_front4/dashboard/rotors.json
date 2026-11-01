@@ -1,0 +1,112 @@
+[
+ {
+  "name": "M1",
+  "group": "rear",
+  "x": -0.531,
+  "y": -0.322,
+  "z": -0.157,
+  "tilt": 22.5,
+  "cant": 30.0,
+  "max_thrust_n": 28.5
+ },
+ {
+  "name": "M2",
+  "group": "rear",
+  "x": -0.531,
+  "y": 0.322,
+  "z": -0.157,
+  "tilt": 22.5,
+  "cant": 30.0,
+  "max_thrust_n": 28.5
+ },
+ {
+  "name": "M3",
+  "group": "rear",
+  "x": -0.531,
+  "y": -0.214,
+  "z": -0.2195,
+  "tilt": 22.5,
+  "cant": 30.0,
+  "max_thrust_n": 28.5
+ },
+ {
+  "name": "M4",
+  "group": "rear",
+  "x": -0.531,
+  "y": 0.214,
+  "z": -0.2195,
+  "tilt": 22.5,
+  "cant": 30.0,
+  "max_thrust_n": 28.5
+ },
+ {
+  "name": "M5",
+  "group": "rear",
+  "x": -0.531,
+  "y": -0.1055,
+  "z": -0.282,
+  "tilt": 22.5,
+  "cant": 30.0,
+  "max_thrust_n": 28.5
+ },
+ {
+  "name": "M6",
+  "group": "rear",
+  "x": -0.531,
+  "y": 0.1055,
+  "z": -0.282,
+  "tilt": 22.5,
+  "cant": 30.0,
+  "max_thrust_n": 28.5
+ },
+ {
+  "name": "M7",
+  "group": "side",
+  "x": 0.255,
+  "y": -0.0641,
+  "z": -0.52,
+  "tilt": 0.0,
+  "cant": -30.0,
+  "max_thrust_n": 32
+ },
+ {
+  "name": "M8",
+  "group": "side",
+  "x": 0.255,
+  "y": 0.0641,
+  "z": -0.52,
+  "tilt": 0.0,
+  "cant": -30.0,
+  "max_thrust_n": 32
+ },
+ {
+  "name": "M9",
+  "group": "vert",
+  "x": 0.355,
+  "y": -0.052,
+  "z": -0.4976,
+  "tilt": 0.0,
+  "cant": -0.0,
+  "max_thrust_n": 32
+ },
+ {
+  "name": "M10",
+  "group": "vert",
+  "x": 0.355,
+  "y": 0.052,
+  "z": -0.4976,
+  "tilt": 0.0,
+  "cant": 0.0,
+  "max_thrust_n": 32
+ },
+ {
+  "name": "CG",
+  "group": "cg",
+  "x": -0.1745,
+  "y": 0.0012,
+  "z": -0.4407,
+  "tilt": null,
+  "cant": null,
+  "max_thrust_n": null
+ }
+]

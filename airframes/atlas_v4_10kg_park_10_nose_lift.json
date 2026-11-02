@@ -1169,7 +1169,7 @@
     "EKF2_RNG_A_HMAX": 8,
     "EKF2_RNG_CTRL": 2,
     "MC_PITCHRATE_P": 0.9,
-    "MC_ROLLRATE_P": 0.6,
+    "MC_ROLLRATE_P": 0.9,
     "MPC_MAN_TILT_MAX": 12,
     "MPC_THR_HOVER": 0.7,
     "SENS_BOARD_X_OFF": 0,
@@ -1183,7 +1183,7 @@
     "MPC_TKO_SPEED": 1.5,
     "MIS_TAKEOFF_ALT": 2.5,
     "NLF_ENABLE": 1,
-    "NLF_ALT": 1,
+    "NLF_ALT": 1.5,
     "NLF_RC_CH": 0,
     "NLF_RC_LAND": 0,
     "COM_FLTMODE1": 11,
@@ -1207,7 +1207,10 @@
     "PWM_AUX_FUNC5": 0,
     "PWM_AUX_FUNC6": 0,
     "PWM_AUX_FUNC7": 0,
-    "PWM_AUX_FUNC8": 0
+    "PWM_AUX_FUNC8": 0,
+    "MC_ROLLRATE_I": 0.6,
+    "MC_ROLLRATE_D": 0.004,
+    "MC_YAW_P": 2.0
   },
   "design": {
     "v4": {

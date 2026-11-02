@@ -132,6 +132,9 @@ private:
   control[_ground.fa-1]=a; control[_ground.fb-1]=b; if (_ground.fc) { control[_ground.fc-1]=c; }
  }
  bool is_front(int i) const { return i==_ground.fa-1 || i==_ground.fb-1 || (_ground.fc && i==_ground.fc-1); }
+ void put_rear(float *control, float c) const {
+  for (int i=0;i<math::min((int)_ground.count,12);i++) { if (!is_front(i)) { control[i]=math::constrain(c,0.f,1.f); } }
+ }
  // After a boot PX4 ignores its range finder until the reading has moved 10 cm (a hard-coded stuck check) and fuses
  // a stand-in EKF2_MIN_RNG meanwhile. Lifting the nose on that let the height estimate drift on the stand (0.8 m in
  // HITL, board log 445): the land detector flipped to "in air", the handover started from a wrong height and the
@@ -160,9 +163,10 @@ private:
   const float effort=0.16f*(to_thrust(a)+to_thrust(b)+(_ground.fc ? to_thrust(c) : 0.f))/(2.f+_ground.wc);
   return math::min(effort,0.8f*(_manthr_min.get()+0.01f));
  }
- void publish_floor_front(hrt_abstime now, const vehicle_attitude_s &att, float c9, float c10, float cc) {
+ void publish_floor_front(hrt_abstime now, const vehicle_attitude_s &att, float c9, float c10, float cc, float rear=NAN) {
   atlas_nose_lift_floor_s floor{}; floor.timestamp=now; floor.timestamp_sample=att.timestamp; floor.active=true;
   for (int i=0;i<12;i++) { floor.control[i]=NAN; }
+  if (PX4_ISFINITE(rear)) { put_rear(floor.control,rear); }
   put_front(floor.control,math::constrain(c9,0.f,1.f),math::constrain(c10,0.f,1.f),math::constrain(cc,0.f,1.f));
   _floor_pub.publish(floor);
  }
@@ -213,6 +217,16 @@ private:
  float _integral{}, _cmd9{}, _cmd10{}, _cmdc{};
  AtlasGroundFilter _lift_rates;     // structural pitch and yaw rate the lift loop and its settle test act on
  AtlasFrontAverage _front_avg;      // what the front fans pushed lately: a ground abort ramps out from this
+ AtlasGroundFilter _lower_rates;    // pitch and yaw rate the lowering and its rear assist act on
+ // The lowering's front commands are slew-limited (GroundFilter.hpp), but not from whatever the takeoff left in them:
+ // after a flight its first step takes the loop's own value at once, as it always has (AtlasFrontSlew passes a wanted
+ // value straight through from a non-finite one). Easing the front fans in from PX4's hover share instead keeps their
+ // large nose-up moment about the rear feet, and past the balance point that tips the nose up (SITL, "abort: attitude
+ // envelope").
+ void restart_front_slew() { _cmd9=_cmd10=_cmdc=NAN; }
+ float _rear_assist{};              // rear motors' thrust share pulling the nose down (GroundFilter.hpp)
+ hrt_abstime _rear_assist_for{};    // the lowering it belongs to (its _phase_start)
+ bool _rear_assist_said{false};
  hrt_abstime _diagnostic_time{};
  uint8_t _xy_reset{}, _z_reset{}, _heading_reset{};
  float _pitch{}, _yaw{}, _x{}, _y{}, _z{}, _target_z{};
@@ -425,6 +439,7 @@ private:
   (ParamFloat<px4::params::NLF_TIMEOUT>) _timeout,
   (ParamFloat<px4::params::NLF_LAND_V>) _land_speed,
   (ParamFloat<px4::params::NLF_DOWN_R>) _down_rate,
+  (ParamFloat<px4::params::NLF_REAR_AST>) _rear_assist_cap,
   (ParamFloat<px4::params::COM_DISARM_LAND>) _disarm_delay,
   (ParamFloat<px4::params::MPC_MANTHR_MIN>) _manthr_min
  )
@@ -456,7 +471,9 @@ private:
   }
   if (!airborne && owned(status)) {
    const bool lifting=(_phase==Lift || _phase==Spool) && _front_avg.primed;
-   _phase=Aborting; _phase_start=hrt_absolute_time(); _abort9=_cmd9; _abort10=_cmd10; _abortc=_cmdc;
+   // (a lowering that has not run a step yet holds no front command: restart_front_slew)
+   _phase=Aborting; _phase_start=hrt_absolute_time();
+   _abort9=PX4_ISFINITE(_cmd9) ? _cmd9 : 0.f; _abort10=PX4_ISFINITE(_cmd10) ? _cmd10 : 0.f; _abortc=PX4_ISFINITE(_cmdc) ? _cmdc : 0.f;
    if (lifting) {
     // Ramp out from what held the nose, never from the last command: that can be the top of a pulse (GroundFilter.hpp),
     // or the bottom of one, which would drop the nose onto its feet with nothing under it.
@@ -697,6 +714,7 @@ private:
     _px4_land_takeover=true; _pilot_ground_abort=false; _pilot_handover=false; _pilot_mode=false;
     _landing_angle=_land_angle_param.get(); _rest_pitch=_landing_angle;
     _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _contact_dwell=0; _touch_z=pos.z; _last_command=0;
+    restart_front_slew();
     _lower_target=structural_pitch_deg(att);
     NL_INFO("PX4 Land is on the rear feet: the module lowers the nose");
    }
@@ -787,7 +805,7 @@ private:
    if (rear_contact) {
     if (!_contact_dwell) { _contact_dwell=now; }
     if (now-_contact_dwell>(near_ground ? 120_ms : 500_ms)) {
-     _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _touch_z=pos.z;
+     _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _touch_z=pos.z; restart_front_slew();
      _lower_target=math::degrees(matrix::Eulerf(matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f))).theta());
      NL_INFO(near_ground ? "landing: rear support detected; lowering nose" : "landing: rear support held 0.5 s (no range check); lowering nose");
     }
@@ -798,16 +816,36 @@ private:
    const matrix::Dcmf structural=matrix::Dcmf(matrix::Quatf(att.q))*matrix::Dcmf(matrix::Eulerf(0.f,math::radians(_hover_angle),0.f));
    const float theta=matrix::Eulerf(structural).theta();
    const matrix::Vector3f omega=matrix::Dcmf(matrix::Eulerf(0.f,math::radians(-_hover_angle),0.f))*matrix::Vector3f(rates.xyz);
+   // Rear assist (GroundFilter.hpp): near the balance point the rear motors pull the nose down, and the front fans are
+   // never asked to hold it up there, so the two do not fight.
+   if (_rear_assist_for!=_phase_start) {
+    _rear_assist_for=_phase_start; _rear_assist=0.f; _lower_rates.reset(); _rear_assist_said=false;
+   }
+   _lower_rates.update(math::degrees(omega(1)), math::degrees(omega(2)));
+   const float balance=AtlasRearAssist::balance_deg(_ground.gx,_ground.gz);
+   _rear_assist=AtlasRearAssist::step(_rear_assist,
+       AtlasRearAssist::wanted(math::degrees(theta),_lower_rates.q,balance,_rear_assist_cap.get()));
+   if (_rear_assist>0.f && !_rear_assist_said) {
+    _rear_assist_said=true;
+    NL_INFO("lowering: nose %.1f, balance %.1f; rear motors pull it down", double(math::degrees(theta)), double(balance));
+   }
    // Settle on the rear feet before starting the rate-limited pitch-down trajectory.
    if (now-_phase_start>1_s) { _lower_target=math::max(_landing_angle-3.f,_lower_target-_down_rate.get()*0.004f); }
    if (_pilot_ground_abort) { _lower_target=math::min(_lower_target,math::degrees(theta)-1.f); }
+   if (PX4_ISFINITE(balance)) { _lower_target=math::min(_lower_target,balance-AtlasRearAssist::kStart); }
+   const float rear_cmd=_rear_assist>0.f ? to_cmd(_rear_assist) : NAN;
    const float q_des=math::constrain(2.f*(_lower_target-math::degrees(theta)),-_down_rate.get(),_down_rate.get());
-   const float error=q_des-math::degrees(omega(1));
+   // On the filtered rate at the lift's gain: on the raw rate at 0.02 the fans hunted at 5.6 Hz (board log 474).
+   const float error=q_des-_lower_rates.q;
    _integral=math::constrain(_integral+error*0.004f,-40.f,40.f);
    const float ff=_ground.mass*9.80665f*(_ground.gx*cosf(theta)+_ground.gz*sinf(theta))/_ground.moment;
-   const float frac=math::constrain(ff+0.02f*error+0.012f*_integral,0.f,1.f);
-   const float delta=math::constrain(-3.f*omega(2),-0.25f,0.25f);
+   const float frac=math::constrain(ff+0.01f*error+0.012f*_integral,0.f,1.f);
+   const float delta=math::constrain(-3.f*math::radians(_lower_rates.r),-0.25f,0.25f);
+   const float was9=_cmd9, was10=_cmd10, wasc=_cmdc;
    front_split(frac,delta);
+   _cmd9=AtlasFrontSlew::step(was9,_cmd9,AtlasFrontSlew::kLowerUpPerSecond);
+   _cmd10=AtlasFrontSlew::step(was10,_cmd10,AtlasFrontSlew::kLowerUpPerSecond);
+   _cmdc=AtlasFrontSlew::step(wasc,_cmdc,AtlasFrontSlew::kLowerUpPerSecond);
    if (_pilot_ground_abort) {
     // Ground abort cannot demand more power than the pilot permitted at entry.
     // Keep per-fan limits so yaw weighting cannot increase either fan independently.
@@ -819,6 +857,7 @@ private:
     offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
     actuator_motors_s motors{}; motors.timestamp=now; motors.timestamp_sample=att.timestamp;
     for (int i=0;i<12;i++) { motors.control[i]=NAN; }
+    if (PX4_ISFINITE(rear_cmd)) { put_rear(motors.control,rear_cmd); }
     put_front(motors.control,_cmd9,_cmd10,_cmdc); _motors_pub.publish(motors);
     vehicle_thrust_setpoint_s thrust{}; thrust.timestamp=now; thrust.timestamp_sample=att.timestamp;
     thrust.xyz[2]=-front_thrust(_cmd9,_cmd10,_cmdc); _thrust_pub.publish(thrust);
@@ -830,7 +869,7 @@ private:
      offboard_control_mode_s mode{}; mode.timestamp=now; mode.direct_actuator=true; _mode_pub.publish(mode);
      if (now-_last_command>500_ms) { command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE,1.f,6.f,status); _last_command=now; }
     }
-    publish_floor_front(now,att,_cmd9,_cmd10,_cmdc);
+    publish_floor_front(now,att,_cmd9,_cmd10,_cmdc,rear_cmd);
    }
    // A stopped pitch despite a continuing nose-down request indicates nose-foot support.
    // Require the resting posture and a bounded height change since rear contact.

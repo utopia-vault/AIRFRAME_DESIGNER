@@ -64,6 +64,32 @@ int main(){
  while (c>0.45f+1e-6f) { c=AtlasFrontSlew::step(c,0.45f); steps++; }
  assert(steps*AtlasFrontSlew::kDt<0.2f);
  assert(AtlasFrontSlew::step(0.3f,std::numeric_limits<float>::quiet_NaN())==0.3f);
+ // The V4's ground model (NLF_GX 0.1956, NLF_GZ -0.4319): the CG stands over the rear feet at 24.4 deg
+ const float bal=AtlasRearAssist::balance_deg(0.1956f,-0.4319f);
+ assert(fabsf(bal-24.4f)<0.2f);
+ // well below it the rear motors stay off; the 31 Oct touchdown (23-25 deg, the nose creeping up) gets them
+ assert(AtlasRearAssist::wanted(12.f,0.f,bal,0.2f)==0.f);
+ assert(AtlasRearAssist::wanted(14.f,5.f,bal,0.2f)==0.f);
+ const float at23=AtlasRearAssist::wanted(23.f,0.f,bal,0.2f), at23_rising=AtlasRearAssist::wanted(23.f,14.f,bal,0.2f);
+ assert(at23>0.07f && at23<0.1f && at23_rising>at23);
+ assert(AtlasRearAssist::wanted(40.f,30.f,bal,0.2f)==0.2f);            // capped: the rear feet keep the weight
+ assert(AtlasRearAssist::wanted(30.f,0.f,bal,0.f)==0.f);               // NLF_REAR_AST 0 switches it off
+ assert(AtlasRearAssist::wanted(std::numeric_limits<float>::quiet_NaN(),0.f,bal,0.2f)==0.f);
+ // in within a fifth of a second, out more gently
+ float ra=0.f; int n=0;
+ while (ra<0.2f-1e-6f) { ra=AtlasRearAssist::step(ra,0.2f); n++; }
+ assert(n*AtlasRearAssist::kDt<=0.21f);
+ assert(fabsf(AtlasRearAssist::step(0.2f,0.f)-(0.2f-0.5f*AtlasRearAssist::kDt))<1e-6f);
+ // The lowering's fans may rise at 2 per second: a 6 Hz swing between 0 and 0.9 is cut to under a fifth of it
+ float lc=0.f, lpeak=0.f;
+ for (int i=0;i<2500;i++) {
+  const float wanted=(static_cast<int>(i*dt*12.f)%2) ? 0.9f : 0.f;
+  lc=AtlasFrontSlew::step(lc,wanted,AtlasFrontSlew::kLowerUpPerSecond);
+  if (i>1250) { lpeak=fmaxf(lpeak,lc); }
+ }
+ assert(lpeak<0.18f && lpeak>0.1f);
+ assert(fabsf(AtlasFrontSlew::step(0.2f,0.9f,AtlasFrontSlew::kLowerUpPerSecond)-0.208f)<1e-6f);
+ assert(fabsf(AtlasFrontSlew::step(0.2f,0.9f)-0.2016f)<1e-6f);                  // the lift's own limit is unchanged
  // primed on its first sample, holds through a bad one, and forgets everything on reset
  AtlasFrontAverage one;
  one.update(0.2f,0.1f,0.f); assert(one.primed && one.a==0.2f && one.b==0.1f);

@@ -32,11 +32,40 @@ struct AtlasGroundFilter {
 // second to one. Falling is five times quicker, and must be: when the nose breaks free the fans have to drop from
 // about 0.8 to 0.45 at once, and limited to 0.4 per second both ways the nose ran on and lifted the aircraft off its
 // feet (SITL, "abort: early liftoff").
+// The nose lowering hunted the same way, at 5.6 Hz with the commands swinging 0 to 0.9 (board log 474), and gets the
+// same treatment except that it may rise faster: below the balance point the fans have to catch a falling nose, and
+// gravity's pull on it grows by the degree. Two per second still cuts a 6 Hz swing of 0.9 to under a fifth of it; one
+// per second was the limit on every swing just after touchdown and made a bigger one (SITL, fans 0.13 to 0.8).
 struct AtlasFrontSlew {
- static constexpr float kDt=0.004f, kUpPerSecond=0.4f, kDownPerSecond=2.f;
- static float step(float previous, float wanted) {
+ static constexpr float kDt=0.004f, kUpPerSecond=0.4f, kDownPerSecond=2.f, kLowerUpPerSecond=2.f;
+ static float step(float previous, float wanted, float up_per_second=kUpPerSecond) {
   if (!std::isfinite(wanted)) { return previous; }
   if (!std::isfinite(previous)) { return wanted; }
+  const float up=up_per_second*kDt, down=kDownPerSecond*kDt;
+  return wanted>previous+up ? previous+up : (wanted<previous-down ? previous-down : wanted);
+ }
+};
+
+// On its rear feet the aircraft balances where its CG stands over them: 24 deg structural for the V4, from the ground
+// model's CG about the rear-foot pivot. Above that it falls backwards, and the front fans, which can only lift the
+// nose, cannot bring it back. On 31 Oct the V4 hovered at about 24 deg, landed on its rear feet at 23-25 deg, sat
+// there for four seconds and went over onto its back. The rear motors sit behind the rear feet and lean forward, so
+// on the feet their thrust pulls the nose down (about 0.19 N m per N on the V4). This is the share of each rear motor's
+// thrust the nose lowering asks for: none more than kStart degrees below the balance point, then more the higher the
+// nose and the faster it rises, never more than the cap (NLF_REAR_AST), which leaves the rear feet carrying the weight.
+struct AtlasRearAssist {
+ static constexpr float kDt=0.004f, kStart=10.f, kPerDeg=0.01f, kPerDegS=0.003f, kUpPerSecond=1.f, kDownPerSecond=0.5f;
+ // CG ahead of (gx) and above (gz < 0) the rear-foot pivot, structural axes
+ static float balance_deg(float gx, float gz) { return atan2f(gx, -gz)*57.2957795f; }
+ static float wanted(float theta_deg, float q_deg_s, float balance_deg, float cap) {
+  if (!std::isfinite(theta_deg) || !std::isfinite(balance_deg) || !(cap>0.f)) { return 0.f; }
+  const float over=theta_deg-(balance_deg-kStart);
+  if (!(over>0.f)) { return 0.f; }
+  const float w=kPerDeg*over+kPerDegS*(std::isfinite(q_deg_s) ? fmaxf(q_deg_s,0.f) : 0.f);
+  return w>cap ? cap : w;
+ }
+ // quick to come in (a nose past the balance point does not wait), slower to go
+ static float step(float previous, float wanted) {
   const float up=kUpPerSecond*kDt, down=kDownPerSecond*kDt;
   return wanted>previous+up ? previous+up : (wanted<previous-down ? previous-down : wanted);
  }

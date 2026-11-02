@@ -168,6 +168,14 @@ parameters:
       default: 3
       min: 1
       max: 5
+    NLF_REAR_AST:
+      description:
+        short: Rear motor nose-down assist while lowering the nose
+        long: 0 = off. Most of each rear motor's thrust (0..1) the nose lowering may use to pull the nose down while it is within 10 deg of the point where the CG stands over the rear feet. Above that point the aircraft falls backwards and the front fans cannot bring it back; the rear motors sit behind the rear feet and pull the nose down.
+      type: float
+      default: 0.2
+      min: 0
+      max: 0.3
     NLF_RC_CH:
       description:
         short: RC channel that requests the takeoff

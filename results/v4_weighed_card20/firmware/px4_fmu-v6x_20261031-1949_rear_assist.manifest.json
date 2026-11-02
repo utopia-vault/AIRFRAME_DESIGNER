@@ -1,0 +1,27 @@
+{
+ "id": "20261031-195046_px4_fmu-v6x",
+ "kind": "flash",
+ "time": "2026-11-01T02:50:46+00:00",
+ "board": {
+  "device": "/dev/cu.usbmodem01",
+  "description": "Auterion PX4 FMU v6X.x",
+  "target": "px4_fmu-v6x",
+  "bootloader": false
+ },
+ "board_firmware": {
+  "version": "1.18.0 beta",
+  "git": "00000023",
+  "board": 53,
+  "vendor_id": 12677,
+  "product_id": 53
+ },
+ "atlas": true,
+ "firmware_sha256": "bbb4e196e7c142a576d02ff467a6da8d02beda8003441e0ed8cac6c94a4a2d8c",
+ "firmware_bytes": 1800846,
+ "airframe": "ATLAS_V4_10kg_park-10_nose_lift",
+ "params_count": 1323,
+ "export_count": 138,
+ "px4_source_commit": "2a0e9109238bd0274608e3c25201be7c40becd0c",
+ "designer_commit": "8b01b103783216209694f67be3e531516def0bfa",
+ "note": "landing: rear motors pull the nose down near the balance point (NLF_REAR_AST, default 0.2)"
+}

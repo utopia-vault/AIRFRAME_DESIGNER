@@ -1,0 +1,27 @@
+{
+ "id": "20261102-184314_px4_fmu-v6x",
+ "kind": "flash",
+ "time": "2026-11-03T02:43:14+00:00",
+ "board": {
+  "device": "/dev/cu.usbmodem01",
+  "description": "Auterion PX4 FMU v6X.x",
+  "target": "px4_fmu-v6x",
+  "bootloader": false
+ },
+ "board_firmware": {
+  "version": "1.18.0 beta",
+  "git": "00000023",
+  "board": 53,
+  "vendor_id": 12677,
+  "product_id": 53
+ },
+ "atlas": true,
+ "firmware_sha256": "49ac254dd1959861afac13440ce50a37e4750f9f6350251f47ce2cca2c98fe6b",
+ "firmware_bytes": 1801070,
+ "airframe": "ATLAS_V4_10kg_park-10_nose_lift",
+ "params_count": 1323,
+ "export_count": 143,
+ "px4_source_commit": "2a0e9109238bd0274608e3c25201be7c40becd0c",
+ "designer_commit": "5e4b2c29e46932d18079db88488f0c1671ce4b58",
+ "note": "quick touchdown: range reference on the rear feet, 5 cm lead with range"
+}

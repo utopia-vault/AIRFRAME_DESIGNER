@@ -1,0 +1,27 @@
+{
+ "id": "20261102-152033_px4_fmu-v6x",
+ "kind": "flash",
+ "time": "2026-11-02T23:20:33+00:00",
+ "board": {
+  "device": "/dev/cu.usbmodem01",
+  "description": "Auterion PX4 FMU v6X.x",
+  "target": "px4_fmu-v6x",
+  "bootloader": false
+ },
+ "board_firmware": {
+  "version": "1.18.0 beta",
+  "git": "00000023",
+  "board": 53,
+  "vendor_id": 12677,
+  "product_id": 53
+ },
+ "atlas": true,
+ "firmware_sha256": "3178f8d9e77b7612e911ae343e4b5b748e1c66ddb4be105e9fe3514819364a7d",
+ "firmware_bytes": 1800942,
+ "airframe": "ATLAS_V4_10kg_park-10_nose_lift",
+ "params_count": 1323,
+ "export_count": 143,
+ "px4_source_commit": "2a0e9109238bd0274608e3c25201be7c40becd0c",
+ "designer_commit": "5e4b2c29e46932d18079db88488f0c1671ce4b58",
+ "note": "NLF_DOWN_R may go to 10 deg/s (was 5); design sets 7 to match NLF_RATE 7 (built 2 Nov 15:18)"
+}

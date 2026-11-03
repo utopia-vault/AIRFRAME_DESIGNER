@@ -1,0 +1,27 @@
+{
+ "id": "20261102-154810_px4_fmu-v6x",
+ "kind": "flash",
+ "time": "2026-11-02T23:48:10+00:00",
+ "board": {
+  "device": "/dev/cu.usbmodem01",
+  "description": "Auterion PX4 FMU v6X.x",
+  "target": "px4_fmu-v6x",
+  "bootloader": false
+ },
+ "board_firmware": {
+  "version": "1.18.0 beta",
+  "git": "00000023",
+  "board": 53,
+  "vendor_id": 12677,
+  "product_id": 53
+ },
+ "atlas": true,
+ "firmware_sha256": "fb736e46b2f571ce38680d2a69fbefd1714728c8e99f14cac963bdf9ff4033f9",
+ "firmware_bytes": 1801102,
+ "airframe": "ATLAS_V4_10kg_park-10_nose_lift",
+ "params_count": 1323,
+ "export_count": 143,
+ "px4_source_commit": "2a0e9109238bd0274608e3c25201be7c40becd0c",
+ "designer_commit": "5e4b2c29e46932d18079db88488f0c1671ce4b58",
+ "note": "smooth nose lowering: soft start over 1.5 s, target never above the nose, rate gain 0.004, integral 0.005 with anti-windup (built 2 Nov 15:46)"
+}

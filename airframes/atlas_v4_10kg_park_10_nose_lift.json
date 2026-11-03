@@ -1191,7 +1191,7 @@
     "COM_FLTMODE5": 2,
     "COM_FLTMODE6": 10,
     "NLF_MODES": 1,
-    "NLF_TARGET": 12.0,
+    "NLF_TARGET": 12,
     "PWM_MAIN_FUNC1": 101,
     "PWM_MAIN_FUNC2": 102,
     "PWM_MAIN_FUNC3": 103,
@@ -1210,7 +1210,10 @@
     "PWM_AUX_FUNC8": 0,
     "MC_ROLLRATE_I": 0.6,
     "MC_ROLLRATE_D": 0.004,
-    "MC_YAW_P": 2.0
+    "MC_YAW_P": 2,
+    "NLF_RATE": 13,
+    "NLF_DOWN_R": 9,
+    "NLF_MOM": 43
   },
   "design": {
     "v4": {

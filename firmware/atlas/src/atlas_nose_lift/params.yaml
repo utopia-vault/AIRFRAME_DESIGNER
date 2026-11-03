@@ -164,10 +164,11 @@ parameters:
     NLF_DOWN_R:
       description:
         short: Nose lowering rate
+        long: Degrees per second once the rear feet are down. Outside 1 to 10 the module refuses the landing, and PX4's own Land lands without lowering the nose.
       type: float
       default: 3
       min: 1
-      max: 5
+      max: 10
     NLF_REAR_AST:
       description:
         short: Rear motor nose-down assist while lowering the nose

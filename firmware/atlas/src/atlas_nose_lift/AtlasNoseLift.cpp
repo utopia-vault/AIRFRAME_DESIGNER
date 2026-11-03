@@ -206,8 +206,10 @@ private:
  AtlasGroundModel _ground{};
  float _rest_pitch{}, _lower_target{}, _hover_angle{}, _landing_angle{};
  hrt_abstime _contact_dwell{};
- // What the range finder read standing on the legs at this takeoff (NAN when unknown): the landing trusts a quick
- // touchdown only within reach of it.
+ // What the range finder read on the rear feet at this takeoff, nose settled at its lift target (NAN when unknown; on
+ // all the legs until then): the landing trusts a quick touchdown only within reach of it. It used to be the reading
+ // on all the legs, nose down, where PX4 shortens the beam by the tilt it sees: 0.37 m against 0.67 m at touchdown
+ // on 2 Nov, out of reach, so every landing waited the half second meant for no range at all.
  float _park_range{NAN};
  float _touch_z{};
  hrt_abstime _start{}, _phase_start{}, _dwell{}, _last_command{};
@@ -224,6 +226,9 @@ private:
  // large nose-up moment about the rear feet, and past the balance point that tips the nose up (SITL, "abort: attitude
  // envelope").
  void restart_front_slew() { _cmd9=_cmd10=_cmdc=NAN; }
+ // NLF_DOWN_R, the nose lowering rate: 1 to 10 deg/s (params.yaml). It was 5 at most, which left the lowering slower than
+ // the lift once NLF_RATE went to 7; any landing request outside the range is refused, so the bound is checked in one place.
+ bool down_rate_ok() { const float r=_down_rate.get(); return PX4_ISFINITE(r) && r>=1.f && r<=10.f; }
  float _rear_assist{};              // rear motors' thrust share pulling the nose down (GroundFilter.hpp)
  hrt_abstime _rear_assist_for{};    // the lowering it belongs to (its _phase_start)
  bool _rear_assist_said{false};
@@ -613,7 +618,7 @@ private:
        || !PX4_ISFINITE(_pitch) || !PX4_ISFINITE(e.psi()) || !PX4_ISFINITE(pos.z)) {
     NL_ERR(want_pilot ? "requires enabled, disarmed, landed, fresh valid attitude and height" : "requires enabled, disarmed, landed, fresh valid attitude and position"); return;
    }
-   if (want_pilot && (!PX4_ISFINITE(_down_rate.get()) || _down_rate.get()<1.f || _down_rate.get()>5.f || _disarm_delay.get()<90.f ||
+   if (want_pilot && (!down_rate_ok() || _disarm_delay.get()<90.f ||
        (_prflt_delay.get()>=0.f && _prflt_delay.get()<90.f))) {
     NL_ERR("pilot handover needs a valid nose lowering rate and COM_DISARM_LAND, COM_DISARM_PRFLT of 90 s or more (Update PX4)"); return;
    }
@@ -625,7 +630,7 @@ private:
        !PX4_ISFINITE(_timeout.get()) || _timeout.get()<10.f || _timeout.get()>60.f) {
     NL_ERR("invalid sequence parameters"); return;
    }
-   if (_rc_throttle.get() && (!PX4_ISFINITE(_down_rate.get()) || _down_rate.get()<1.f || _down_rate.get()>5.f ||
+   if (_rc_throttle.get() && (!down_rate_ok() ||
        !PX4_ISFINITE(_land_speed.get()) || _land_speed.get()<.05f || _land_speed.get()>.3f || _disarm_delay.get()<90.f)) {
     NL_ERR("staged mode needs valid landing rates and COM_DISARM_LAND >= 90 s"); return;
    }
@@ -676,7 +681,7 @@ private:
    if (!(own_hover || other_hover) || !armed || !_enable.get() || !atlas_model_matches(_hover_angle, _ground)) {
     NL_WARN("landing needs an armed hover and a matching model");
    } else if (!PX4_ISFINITE(_land_speed.get()) || _land_speed.get()<0.05f || _land_speed.get()>0.3f ||
-              !PX4_ISFINITE(_down_rate.get()) || _down_rate.get()<1.f || _down_rate.get()>5.f) {
+              !down_rate_ok()) {
     NL_ERR("invalid landing parameters");
    } else if (!PX4_ISFINITE(_disarm_delay.get()) || _disarm_delay.get()<40.f/_down_rate.get()+8.f) {
     NL_ERR("landing needs COM_DISARM_LAND long enough for controlled nose lowering (use 60 s)");
@@ -710,7 +715,7 @@ private:
    updateParams();
    _hover_angle=_hover_param.get();
    if (atlas_model_matches(_hover_angle, _ground) && PX4_ISFINITE(_land_angle_param.get())
-       && PX4_ISFINITE(_down_rate.get()) && _down_rate.get()>=1.f && _down_rate.get()<=5.f) {
+       && down_rate_ok()) {
     _px4_land_takeover=true; _pilot_ground_abort=false; _pilot_handover=false; _pilot_mode=false;
     _landing_angle=_land_angle_param.get(); _rest_pitch=_landing_angle;
     _phase=LowerNose; _phase_start=now; _dwell=0; _integral=0.f; _contact_dwell=0; _touch_z=pos.z; _last_command=0;
@@ -797,11 +802,14 @@ private:
    // How long that has to last is the slide on the legs: until the module takes the motors, PX4 flies on with the
    // feet down, cannot roll back to its hover trim, winds up a roll torque that the laterally canted rear jets turn
    // into a side force, and V4 slid 39 cm sideways in 0.9 s (SITL). With the range finder reading within reach of
-   // what it read on the legs at takeoff, 120 ms is enough; without that, a stall in the air must not look like the
+   // what it read on the rear feet at takeoff, 120 ms is enough; without that, a stall in the air must not look like the
    // ground, and the contact has to hold for half a second.
-   const bool rear_contact=now-_phase_start>2_s && fabsf(pos.vz)<0.055f && _target_z-pos.z>0.12f && fabsf(e.phi())<math::radians(3.f);
+   // The setpoint runs ahead at NLF_LAND_V once the feet stop the aircraft, and 12 cm of it was another half second at
+   // 0.1 m/s. With the range finder saying the feet are on the ground, 5 cm says the controller is pushing against it.
    const bool near_ground=PX4_ISFINITE(_park_range) && pos.dist_bottom_valid && PX4_ISFINITE(pos.dist_bottom)
        && pos.dist_bottom<_park_range+0.25f;
+   const bool rear_contact=now-_phase_start>2_s && fabsf(pos.vz)<0.055f && _target_z-pos.z>(near_ground ? 0.05f : 0.12f)
+       && fabsf(e.phi())<math::radians(3.f);
    if (rear_contact) {
     if (!_contact_dwell) { _contact_dwell=now; }
     if (now-_contact_dwell>(near_ground ? 120_ms : 500_ms)) {
@@ -817,7 +825,7 @@ private:
    const float theta=matrix::Eulerf(structural).theta();
    const matrix::Vector3f omega=matrix::Dcmf(matrix::Eulerf(0.f,math::radians(-_hover_angle),0.f))*matrix::Vector3f(rates.xyz);
    // Rear assist (GroundFilter.hpp): near the balance point the rear motors pull the nose down, and the front fans are
-   // never asked to hold it up there, so the two do not fight.
+   // only ever asked to slow it (the target never rises above the nose, below), so the two do not fight.
    if (_rear_assist_for!=_phase_start) {
     _rear_assist_for=_phase_start; _rear_assist=0.f; _lower_rates.reset(); _rear_assist_said=false;
    }
@@ -829,17 +837,31 @@ private:
     _rear_assist_said=true;
     NL_INFO("lowering: nose %.1f, balance %.1f; rear motors pull it down", double(math::degrees(theta)), double(balance));
    }
-   // Settle on the rear feet before starting the rate-limited pitch-down trajectory.
-   if (now-_phase_start>1_s) { _lower_target=math::max(_landing_angle-3.f,_lower_target-_down_rate.get()*0.004f); }
+   // The target leaves from where the nose is, at a rate that rises from nothing over 1.5 s (AtlasLowerStart). It used
+   // to stand still for a second and jump to ten degrees under the balance point, so the full rate was asked for at once.
+   const float rate=AtlasLowerStart::rate(_down_rate.get(),(now-_phase_start)*1e-6f);
+   _lower_target=math::max(_landing_angle-3.f,_lower_target-rate*0.004f);
    if (_pilot_ground_abort) { _lower_target=math::min(_lower_target,math::degrees(theta)-1.f); }
-   if (PX4_ISFINITE(balance)) { _lower_target=math::min(_lower_target,balance-AtlasRearAssist::kStart); }
+   // Only ever down. The rear motors cut at contact and the nose drops on its own, on 2 Nov from 23 to 12.7 deg in a
+   // third of a second; the loop then lifted it back (+3.4 deg/s asked, 16.9 reached) and the nose bounced on its feet
+   // for two seconds. A target that follows a falling nose down leaves the fans only slowing it, never raising it.
+   _lower_target=math::min(_lower_target,math::degrees(theta));
    const float rear_cmd=_rear_assist>0.f ? to_cmd(_rear_assist) : NAN;
    const float q_des=math::constrain(2.f*(_lower_target-math::degrees(theta)),-_down_rate.get(),_down_rate.get());
-   // On the filtered rate at the lift's gain: on the raw rate at 0.02 the fans hunted at 5.6 Hz (board log 474).
+   // On the filtered rate. On the raw rate at 0.02 the fans hunted at 5.6 Hz (board log 474); filtered at 0.01 they
+   // still did, at 5.3 Hz with the nose lagging them by a quarter turn and a loop gain there of about 0.8 (log 482).
+   // 0.004 takes that to about 0.3; the angle target, the integral and the feedforward carry the slow motion. The
+   // integral comes down with it (0.012 -> 0.005): left as it was it outweighed the rate term, built up while a fall
+   // was caught and lifted the nose back afterwards, a slow bounce of its own (SITL, nose-high touchdown).
    const float error=q_des-_lower_rates.q;
-   _integral=math::constrain(_integral+error*0.004f,-40.f,40.f);
    const float ff=_ground.mass*9.80665f*(_ground.gx*cosf(theta)+_ground.gz*sinf(theta))/_ground.moment;
-   const float frac=math::constrain(ff+0.01f*error+0.012f*_integral,0.f,1.f);
+   const float unclamped=ff+0.004f*error+0.005f*_integral;
+   // No winding up against a limit: above the balance point the fans sit at nothing while the nose is asked down, and an
+   // integral that kept counting there would hold them off once the nose falls past it.
+   if (!((unclamped<=0.f && error<0.f) || (unclamped>=1.f && error>0.f))) {
+    _integral=math::constrain(_integral+error*0.004f,-40.f,40.f);
+   }
+   const float frac=math::constrain(ff+0.004f*error+0.005f*_integral,0.f,1.f);
    const float delta=math::constrain(-3.f*math::radians(_lower_rates.r),-0.25f,0.25f);
    const float was9=_cmd9, was10=_cmd10, wasc=_cmdc;
    front_split(frac,delta);
@@ -968,6 +990,7 @@ private:
        && fabsf(e.phi())<math::radians(3.f) && fabsf(_lift_rates.r)<3.f) {
     if (!_dwell) { _dwell=now; }
     if ((now-_dwell)*1e-6f>=_hold.get()) {
+     if (pos.dist_bottom_valid && PX4_ISFINITE(pos.dist_bottom)) { _park_range=pos.dist_bottom; }   // on the rear feet, as at touchdown
      if (_pilot_mode && !_ready_announced) { NL_INFO("nose ready: press Takeoff again for 1 m hover; lower throttle to abort"); _ready_announced=true; }
      if (_pilot_handover) {
       if (!_ready_announced) { NL_INFO("nose ready: press Takeoff again, then raise the throttle slowly (PX4 %s takes over once airborne)", pilot_mode_name()); _ready_announced=true; }

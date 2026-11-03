@@ -90,6 +90,15 @@ int main(){
  assert(lpeak<0.18f && lpeak>0.1f);
  assert(fabsf(AtlasFrontSlew::step(0.2f,0.9f,AtlasFrontSlew::kLowerUpPerSecond)-0.208f)<1e-6f);
  assert(fabsf(AtlasFrontSlew::step(0.2f,0.9f)-0.2016f)<1e-6f);                  // the lift's own limit is unchanged
+ // The lowering asks for nothing at contact and for NLF_DOWN_R 1.5 s later, rising smoothly and never past it
+ assert(AtlasLowerStart::rate(7.f,0.f)==0.f && AtlasLowerStart::rate(7.f,-1.f)==0.f);
+ assert(fabsf(AtlasLowerStart::rate(7.f,0.75f)-3.5f)<1e-5f);
+ assert(AtlasLowerStart::rate(7.f,1.5f)==7.f && AtlasLowerStart::rate(7.f,30.f)==7.f);
+ assert(AtlasLowerStart::rate(7.f,0.1f)<0.25f);                                // gently at first: no step in the push
+ float prev_rate=0.f; bool start_rises=true;
+ for (int i=1;i<400;i++) { const float r=AtlasLowerStart::rate(7.f,i*dt); start_rises=start_rises && r>=prev_rate && r<=7.f; prev_rate=r; }
+ assert(start_rises);
+ assert(AtlasLowerStart::rate(std::numeric_limits<float>::quiet_NaN(),1.f)==0.f);
  // primed on its first sample, holds through a bad one, and forgets everything on reset
  AtlasFrontAverage one;
  one.update(0.2f,0.1f,0.f); assert(one.primed && one.a==0.2f && one.b==0.1f);

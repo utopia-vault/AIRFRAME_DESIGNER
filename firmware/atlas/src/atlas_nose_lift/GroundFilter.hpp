@@ -46,6 +46,21 @@ struct AtlasFrontSlew {
  }
 };
 
+// How fast the nose is asked to come down, kSeconds after contact. At contact the lowering asked for its full rate at
+// once (its target jumped to ten degrees under the balance point): the front fans went from 0.43 to nothing in 0.4 s,
+// the nose fell from 23 to 13 deg at up to 42 deg/s, and catching it lifted it back (board log 482). The rate now rises
+// from nothing to NLF_DOWN_R, smoothly (no step in the acceleration either), so the nose starts down the way it
+// will continue. Holding the front fans at PX4's hover share instead lifted the nose off the feet in SITL.
+struct AtlasLowerStart {
+ static constexpr float kSeconds=1.5f;
+ static float rate(float full, float elapsed_s) {
+  if (!std::isfinite(full) || !std::isfinite(elapsed_s) || elapsed_s<=0.f) { return 0.f; }
+  if (elapsed_s>=kSeconds) { return full; }
+  const float s=elapsed_s/kSeconds;
+  return full*s*s*(3.f-2.f*s);
+ }
+};
+
 // On its rear feet the aircraft balances where its CG stands over them: 24 deg structural for the V4, from the ground
 // model's CG about the rear-foot pivot. Above that it falls backwards, and the front fans, which can only lift the
 // nose, cannot bring it back. On 31 Oct the V4 hovered at about 24 deg, landed on its rear feet at 23-25 deg, sat

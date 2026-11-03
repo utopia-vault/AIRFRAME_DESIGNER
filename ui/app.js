@@ -1135,8 +1135,14 @@ function updateFooter() {
                         : `Firmware sources changed (${(fw.stale || []).slice(0, 3).join(', ') || 'new binary'}): rebuilds PX4 SITL, relaunches it, then pushes the parameters`)
       : (status.ctl_connected ? 'Write the rotor geometry and output mapping to the flight controller and save it' : 'PX4 not connected'));
   upd.classList.toggle('fw-stale', fwStale);
-  if (inLoader) $('#update-status').innerHTML = '<span class="warn">The board is in its bootloader: press Flash firmware</span>';
-  else if (fwStale && !geometryDirty && !$('#update-status').textContent) $('#update-status').innerHTML = onBoard ? '<span class="warn">The board firmware is out of date</span>' : '<span class="warn">Firmware sources changed: Update PX4 rebuilds it</span>';
+  // The firmware warnings are this function's own (data-fw) and go as soon as they stop being true: before a board
+  // answers, the check is against the SITL binary, and its warning stayed on screen after the board said it was current.
+  const line = $('#update-status');
+  const ours = !!line.querySelector('[data-fw]');
+  const warn = text => { if (line.textContent !== text) line.innerHTML = `<span class="warn" data-fw>${text}</span>`; };
+  if (inLoader) warn('The board is in its bootloader: press Flash firmware');
+  else if (fwStale && !geometryDirty && (ours || !line.textContent)) warn(onBoard ? 'The board firmware is out of date' : 'Firmware sources changed: Update PX4 rebuilds it');
+  else if (!fwStale && ours) line.textContent = '';
 }
 // ============================================================ the parameter table
 // Two kinds of row, and the difference is not a matter of taste: a *geometry dependent* parameter is one
